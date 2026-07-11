@@ -265,24 +265,53 @@
 </div>
 </details>
 
-<!-- ============ 6. VISUALISATION AMPLIFIÉE ============ -->
-<details id="secAmp">
-<summary>6 · Mouvement amplifié (visualisation seulement)</summary>
+<!-- ============ 6. CARTOGRAPHIE PLEIN CHAMP ============ -->
+<details id="secMap">
+<summary>6 · Cartographie du mouvement (plein champ)</summary>
 <div class="body">
-  <div class="warn">Mode illustratif : la trajectoire est amplifiée artificiellement, ce n'est pas la mesure réelle.</div>
+  <div class="meta">Analyse <b>tous les pixels de la ROI</b> et cartographie l'amplitude de mouvement de chacun — façon déformée opérationnelle (ODS). À une fréquence cible, la <b>phase</b> révèle les zones en opposition, comme en analyse modale.</div>
   <div class="grid" style="margin:8px 0">
-    <div><label for="ampIn">Amplification ×<span id="ampVal">25</span></label><input type="range" id="ampIn" min="1" max="100" value="25"></div>
-    <div><label for="ampSpeed">Vitesse de lecture</label>
-      <select id="ampSpeed"><option value="0.1">0.1×</option><option value="0.25" selected>0.25×</option><option value="1">1×</option></select></div>
-    <div><label>&nbsp;</label><button id="ampPlayBtn">▶ Rejouer</button></div>
+    <div><label for="mapF0In" title="0 = carte large bande (écart-type temporel). Sinon amplitude et phase à cette fréquence (DFT par pixel).">Fréquence cible (Hz, 0 = large bande)</label><input type="number" id="mapF0In" value="0" min="0" step="0.5"></div>
+    <div>
+      <label for="mapModeSel">Affichage</label>
+      <select id="mapModeSel">
+        <option value="disp">≈ Déplacement (σ/|∇I|)</option>
+        <option value="raw">Énergie brute (σ intensité)</option>
+        <option value="phase">Amplitude + phase (si f cible)</option>
+      </select>
+    </div>
+    <div><label for="mapOpIn">Opacité carte <span id="mapOpVal">70</span> %</label><input type="range" id="mapOpIn" min="10" max="100" value="70"></div>
+    <div><label>&nbsp;</label><button class="primary" id="mapBtn" disabled>Calculer la carte</button></div>
   </div>
-  <div class="vid-wrap"><canvas id="ampC" width="640" height="360"></canvas></div>
+  <div class="vid-wrap"><canvas id="mapC" width="640" height="360"></canvas></div>
+  <div class="row" style="margin-top:6px;align-items:center">
+    <canvas id="legendC" width="180" height="14" style="border-radius:3px"></canvas>
+    <span class="meta mono" id="legendTxt">—</span>
+  </div>
+  <div class="meta" id="mapInfo" style="margin-top:6px">Toucher la carte pour lire la valeur d'un pixel.</div>
+  <div class="hint">≈ Déplacement : σ de l'intensité normalisé par le gradient local (px, approximation valable pour de petits mouvements sub-pixel). Zones sans texture (gradient faible) masquées.</div>
 </div>
 </details>
 
-<!-- ============ 7. COMPARAISON ============ -->
+<!-- ============ 7. MOUVEMENT AMPLIFIÉ (EULÉRIEN) ============ -->
+<details id="secAmp">
+<summary>7 · Mouvement amplifié (magnification eulérienne)</summary>
+<div class="body">
+  <div class="warn">Mode illustratif (principe MIT « Eulerian Video Magnification ») : les variations temporelles d'intensité de la ROI sont amplifiées à la lecture. Visualisation seulement, pas une mesure.</div>
+  <div class="grid" style="margin:8px 0">
+    <div><label>Activer</label><span class="chk"><input type="checkbox" id="evChk"><span>Amplifier pendant la lecture</span></span></div>
+    <div><label for="evAlpha">Facteur de déplacement ×<span id="evAlphaVal">30</span></label><input type="range" id="evAlpha" min="1" max="100" value="30"></div>
+    <div><label for="evFl" title="Bande temporelle amplifiée, en Hz de LECTURE (voir note)">Bande basse (Hz)</label><input type="number" id="evFl" value="0.5" min="0.05" step="0.1"></div>
+    <div><label for="evFh">Bande haute (Hz)</label><input type="number" id="evFh" value="6" min="0.2" step="0.5"></div>
+  </div>
+  <div class="meta">Lance la <b>lecture</b> dans le lecteur (section 2) avec la case cochée : le mouvement des pixels de la ROI est amplifié en direct.</div>
+  <div class="hint">Les fréquences sont en Hz de <b>lecture</b>. Un ralenti 240 fps exporté en timeline 30 fps divise les fréquences réelles par 8 : une vibration machine à 24 Hz apparaît à 3 Hz à l'écran.</div>
+</div>
+</details>
+
+<!-- ============ 8. COMPARAISON ============ -->
 <details id="secCmp">
-<summary>7 · Comparaison avec une référence</summary>
+<summary>8 · Comparaison avec une référence</summary>
 <div class="body">
   <div class="row">
     <button id="cmpBtn">Importer spectre de référence (CSV)</button>
@@ -297,7 +326,7 @@
 
 <!-- ============ 8. EXPORT & RAPPORT ============ -->
 <details id="secExp">
-<summary>8 · Export & rapport de synthèse</summary>
+<summary>9 · Export & rapport de synthèse</summary>
 <div class="body">
   <div class="row">
     <button class="small" id="expTimeBtn">CSV temporel</button>
@@ -313,7 +342,7 @@
 
 <!-- ============ 9. CONSEILS IPHONE ============ -->
 <details>
-<summary>9 · Précautions vidéos iPhone</summary>
+<summary>10 · Précautions vidéos iPhone</summary>
 <div class="body">
   <ul class="tips">
     <li>Utiliser la caméra arrière principale <b>1×</b> (pas d'ultra grand-angle ni de zoom numérique)</li>
@@ -479,7 +508,7 @@ $("fileIn").onchange=e=>{
     $("fileMeta").innerHTML=`<b>${f.name}</b> — ${fmtF(S.dur,2)} s — ${S.vw}×${S.vh}. `+
       `Le framerate n'est pas exposé de façon fiable par le navigateur : <b>vérifie-le manuellement</b> (réglage iPhone).`;
     $("t1In").value=fmtF(S.dur,2);
-    $("runBtn").disabled=false;
+    $("runBtn").disabled=false;$("mapBtn").disabled=false;
     sizeCanvas();seekTo(0).then(draw);
     if(/\.mov$/i.test(f.name))
       $("fileMeta").innerHTML+=`<div class="warn">.mov : selon le codec (HEVC), certains navigateurs ne le lisent pas — si l'image reste noire, réexporter en .mp4 H.264.</div>`;
@@ -549,7 +578,7 @@ function togglePlay(){
   if(!S.loaded)return;
   S.playing=!S.playing;
   $("playBtn").textContent=S.playing?"⏸":"▶";
-  if(S.playing){video.play();const loop=()=>{if(!S.playing)return;draw();requestAnimationFrame(loop);};loop();}
+  if(S.playing){video.play();const loop=now=>{if(!S.playing)return;draw();applyMagnify(now||performance.now());requestAnimationFrame(loop);};requestAnimationFrame(loop);}
   else video.pause();
 }
 $("prevBtn").onclick=async()=>{S.playing=false;video.pause();$("playBtn").textContent="▶";await seekTo(video.currentTime-1/S.fps);draw();};
@@ -866,10 +895,9 @@ function postProcessAndShow(){
     {responsive:true,displaylogo:false});
 
   updateSpectrum();
-  buildAmpViz();
   buildReport(st,qm);
   $("alertBox").textContent=(S.res.alerts||[]).join("\n");
-  for(const id of["secTime","secSpec","secAmp","secExp"])$(id).open=true;
+  for(const id of["secTime","secSpec","secExp"])$(id).open=true;
 }
 
 /* ─── spectre ─── */
@@ -924,59 +952,215 @@ for(const id of["qtySel","scaleSel","fmaxIn","accUnitSel","winSel","axisSel","un
                 "hpIn","lpIn","smoothIn","demeanChk","detrendChk","interpChk","vminIn"])
   $(id).addEventListener("change",()=>{if(S.res){saveParams();postProcessAndShow();}});
 
-/* ─── visualisation amplifiée ─── */
-let refFrameBmp=null;
-async function buildAmpViz(){
-  const c=$("ampC"),ctx=c.getContext("2d");
-  if(!S.demo&&S.loaded){
-    await seekTo(+$("t0In").value||0);
-    refFrameBmp=document.createElement("canvas");
-    refFrameBmp.width=c.width;refFrameBmp.height=c.height;
-    refFrameBmp.getContext("2d").drawImage(video,0,0,c.width,c.height);
-  }else refFrameBmp=null;
-  drawAmpFrame(0);
+/* ═══════════════ CARTOGRAPHIE PLEIN CHAMP (ODS) ═══════════════ */
+let MAP=null, mapRefFrame=null;
+/* colormap façon turbo : bleu → cyan → vert → jaune → rouge */
+function cmap(v){
+  v=Math.max(0,Math.min(1,v));
+  const st=[[15,40,120],[30,160,220],[60,210,140],[250,210,60],[239,51,70]];
+  const p=v*(st.length-1),i=Math.min(st.length-2,Math.floor(p)),f=p-i;
+  return st[i].map((c,k)=>Math.round(c+(st[i+1][k]-c)*f));
 }
-function drawAmpFrame(idx){
-  const c=$("ampC"),ctx=c.getContext("2d");
-  const P=processedSignals();if(!P)return;
-  const amp=+$("ampIn").value;
-  ctx.fillStyle="#021740";ctx.fillRect(0,0,c.width,c.height);
-  if(refFrameBmp)ctx.drawImage(refFrameBmp,0,0);
-  const uf=unitFactor().f;                    // signaux → repx px
-  const sc=v2c();
-  const bx=(S.res.x0||S.vw/2)*sc,by=(S.res.y0||S.vh/2)*sc;
-  const px=i=>bx+(P.x[i]/uf)*sc,py=i=>by+(P.y[i]/uf)*sc;
-  const ax=i=>bx+(P.x[i]/uf)*sc*amp,ay=i=>by+(P.y[i]/uf)*sc*amp;
-  const N=P.t.length,upto=Math.max(2,Math.min(N,idx));
-  /* trajectoire réelle (cyan) et amplifiée (rouge) */
-  ctx.strokeStyle="rgba(79,209,232,.9)";ctx.lineWidth=1;
-  ctx.beginPath();for(let i=0;i<upto;i++){i?ctx.lineTo(px(i),py(i)):ctx.moveTo(px(i),py(i));}ctx.stroke();
-  ctx.strokeStyle="rgba(239,51,70,.85)";ctx.lineWidth=1.2;
-  ctx.beginPath();for(let i=0;i<upto;i++){i?ctx.lineTo(ax(i),ay(i)):ctx.moveTo(ax(i),ay(i));}ctx.stroke();
-  /* point courant + vecteur amplifié */
-  const i=upto-1;
-  ctx.beginPath();ctx.arc(px(i),py(i),4,0,7);ctx.fillStyle="#4FD1E8";ctx.fill();
-  ctx.strokeStyle="#EF3346";ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(ax(i),ay(i));ctx.stroke();
-  ctx.beginPath();ctx.arc(ax(i),ay(i),5,0,7);ctx.fillStyle="#EF3346";ctx.fill();
-  ctx.fillStyle="#EAF0FA";ctx.font="11px Arial";
-  ctx.fillText("×"+amp+"  ·  t = "+fmtF(P.t[i],3)+" s",10,18);
+function percentile(arr,p){
+  const v=Array.from(arr).filter(x=>isFinite(x)&&x>0).sort((a,b)=>a-b);
+  return v.length?v[Math.min(v.length-1,Math.floor(p*v.length))]:1;
 }
-$("ampIn").oninput=()=>{$("ampVal").textContent=$("ampIn").value;if(S.res)drawAmpFrame(2e9);};
-$("ampPlayBtn").onclick=()=>{
-  if(!S.res)return;
-  if(S.ampAnim){cancelAnimationFrame(S.ampAnim);S.ampAnim=null;$("ampPlayBtn").textContent="▶ Rejouer";return;}
-  const P=processedSignals(),speed=+$("ampSpeed").value,t0=performance.now();
-  $("ampPlayBtn").textContent="⏸ Stop";
-  const loop=now=>{
-    const tv=(now-t0)/1000*speed;
-    const idx=Math.floor(tv*P.fs);
-    if(idx>=P.t.length){drawAmpFrame(2e9);$("ampPlayBtn").textContent="▶ Rejouer";S.ampAnim=null;return;}
-    drawAmpFrame(idx+1);
-    S.ampAnim=requestAnimationFrame(loop);
+$("mapBtn").onclick=async()=>{
+  if(!S.loaded){alert("Charger une vidéo d'abord.");return;}
+  if(!S.roi){alert("Définir une ROI (mode sélection ROI).");return;}
+  saveParams();
+  S.playing=false;video.pause();$("playBtn").textContent="▶";
+  S.stop=false;$("mapBtn").disabled=true;$("stopBtn").disabled=false;
+  $("progWrap").style.display="block";
+
+  const fps=S.fps=+$("fpsIn").value||30;
+  const t0=+$("t0In").value||0;
+  let t1=+$("t1In").value||S.dur;if(t1<=t0)t1=S.dur;t1=Math.min(t1,S.dur);
+  let n=Math.floor((t1-t0)*fps);
+  if(n>1500){n=1500;S.res&&S.res.alerts&&S.res.alerts.push("Carte limitée aux 1500 premières images de la portion.");}
+  const f0=+$("mapF0In").value||0;
+  clampRoi();
+  const scale=Math.min(1,140/Math.max(S.roi.w,S.roi.h));
+  const gw=Math.max(16,Math.round(S.roi.w*scale)),gh=Math.max(16,Math.round(S.roi.h*scale));
+  const px=gw*gh;
+  const mean=new Float32Array(px),M2=new Float32Array(px);
+  const re=new Float32Array(px),im=new Float32Array(px);
+  let sumC=0,sumS=0;                          // pour corriger la fuite du DC dans la DFT
+  grabC.width=gw;grabC.height=gh;
+  const getG=()=>{
+    gctx.drawImage(video,S.roi.x,S.roi.y,S.roi.w,S.roi.h,0,0,gw,gh);
+    const d=gctx.getImageData(0,0,gw,gh).data,g=new Float32Array(px);
+    for(let i=0,p=0;i<px;i++,p+=4)g[i]=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
+    return g;
   };
-  S.ampAnim=requestAnimationFrame(loop);
+  await seekTo(t0);
+  const ref=getG();
+  const grad=new Float32Array(px);
+  for(let y=1;y<gh-1;y++)for(let x=1;x<gw-1;x++){
+    const i=y*gw+x;
+    grad[i]=Math.hypot((ref[i+1]-ref[i-1])/2,(ref[i+gw]-ref[i-gw])/2);
+  }
+  /* image de fond pour l'affichage */
+  mapRefFrame=document.createElement("canvas");
+  mapRefFrame.width=dispC.width;mapRefFrame.height=dispC.height;
+  mapRefFrame.getContext("2d").drawImage(video,0,0,dispC.width,dispC.height);
+
+  const w0=2*Math.PI*f0/fps,startT=performance.now();
+  for(let k=0;k<n;k++){
+    if(S.stop)break;
+    await seekTo(t0+k/fps);
+    const g=getG();
+    const ck=Math.cos(w0*k),sk=Math.sin(w0*k);
+    if(f0>0){sumC+=ck;sumS+=sk;}
+    for(let i=0;i<px;i++){
+      const d=g[i]-mean[i];mean[i]+=d/(k+1);M2[i]+=d*(g[i]-mean[i]);   // Welford
+      if(f0>0){re[i]+=g[i]*ck;im[i]-=g[i]*sk;}
+    }
+    if(k%5===0){
+      const pct=(k+1)/n*100,el=(performance.now()-startT)/1000;
+      $("progFill").style.width=pct+"%";
+      $("progTxt").textContent=`carte : image ${k+1}/${n} — ${fmtF(pct,0)} % — ~${fmtF(el/(k+1)*(n-k-1),0)} s restantes`;
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+  const sigma=new Float32Array(px),ampf=new Float32Array(px),phase=new Float32Array(px);
+  for(let i=0;i<px;i++){
+    sigma[i]=Math.sqrt(Math.max(0,M2[i]/Math.max(1,n-1)));
+    if(f0>0){
+      const rr=re[i]-mean[i]*sumC,ii=im[i]+mean[i]*sumS;   // retire la contribution du DC
+      ampf[i]=2*Math.hypot(rr,ii)/n;phase[i]=Math.atan2(ii,rr);
+    }
+  }
+  MAP={gw,gh,sigma,ampf,phase,grad,f0,n,roi:{...S.roi}};
+  $("mapBtn").disabled=false;$("stopBtn").disabled=true;
+  $("progFill").style.width="100%";
+  $("progTxt").textContent=`carte calculée : ${gw}×${gh} px de grille × ${n} images`;
+  $("secMap").open=true;
+  renderMap();
 };
+function mapValues(){
+  if(!MAP)return null;
+  const mode=$("mapModeSel").value,useF=MAP.f0>0;
+  const raw=(mode==="raw");
+  const v=new Float32Array(MAP.gw*MAP.gh);
+  for(let i=0;i<v.length;i++){
+    const s=useF?MAP.ampf[i]:MAP.sigma[i];
+    if(raw)v[i]=s;
+    else v[i]=MAP.grad[i]>4?s/MAP.grad[i]:NaN;   // ≈ déplacement px, zones plates masquées
+  }
+  return v;
+}
+function renderMap(){
+  if(!MAP)return;
+  const c=$("mapC"),ctx=c.getContext("2d");
+  c.width=dispC.width;c.height=dispC.height;
+  ctx.fillStyle="#021740";ctx.fillRect(0,0,c.width,c.height);
+  if(mapRefFrame)ctx.drawImage(mapRefFrame,0,0,c.width,c.height);
+  const mode=$("mapModeSel").value;
+  const v=mapValues();
+  const vmax=percentile(v,0.99)||1;
+  const img=new ImageData(MAP.gw,MAP.gh);
+  for(let i=0;i<v.length;i++){
+    let r,g,b,a=255;
+    if(mode==="phase"&&MAP.f0>0){
+      /* teinte = phase, luminosité = amplitude → zones en opposition en couleurs opposées */
+      const amp=Math.min(1,(isFinite(v[i])?v[i]:0)/vmax);
+      const hue=(MAP.phase[i]+Math.PI)/(2*Math.PI)*360;
+      const [rr,gg,bb]=hsl2rgb(hue,0.9,0.25+0.4*amp);
+      r=rr;g=gg;b=bb;a=Math.round(60+195*amp);
+    }else{
+      if(!isFinite(v[i])){img.data[i*4+3]=0;continue;}
+      [r,g,b]=cmap(v[i]/vmax);
+      a=Math.round(40+215*Math.min(1,v[i]/vmax));
+    }
+    img.data[i*4]=r;img.data[i*4+1]=g;img.data[i*4+2]=b;img.data[i*4+3]=a;
+  }
+  const tmp=document.createElement("canvas");tmp.width=MAP.gw;tmp.height=MAP.gh;
+  tmp.getContext("2d").putImageData(img,0,0);
+  const sc=v2c();
+  ctx.globalAlpha=+$("mapOpIn").value/100;
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(tmp,MAP.roi.x*sc,MAP.roi.y*sc,MAP.roi.w*sc,MAP.roi.h*sc);
+  ctx.globalAlpha=1;
+  ctx.strokeStyle="#EF3346";ctx.lineWidth=1.5;
+  ctx.strokeRect(MAP.roi.x*sc,MAP.roi.y*sc,MAP.roi.w*sc,MAP.roi.h*sc);
+  /* légende */
+  const lc=$("legendC"),lctx=lc.getContext("2d");
+  for(let x=0;x<lc.width;x++){
+    const [r,g,b]=mode==="phase"?hsl2rgb(x/lc.width*360,0.9,0.5):cmap(x/lc.width);
+    lctx.fillStyle=`rgb(${r},${g},${b})`;lctx.fillRect(x,0,1,lc.height);
+  }
+  const unit=(mode==="raw")?"niv. gris (σ)":(MAP.f0>0?"px @ "+fmtF(MAP.f0,1)+" Hz":"px (σ)");
+  $("legendTxt").textContent=mode==="phase"?`phase −180°→+180° (luminosité = amplitude)`:`0 → ${fmtF(vmax,3)} ${unit}`;
+  $("mapInfo").textContent=(MAP.f0>0?`Carte à ${fmtF(MAP.f0,2)} Hz (amplitude${mode==="phase"?" + phase":""}), `:"Carte large bande, ")
+    +`grille ${MAP.gw}×${MAP.gh}, ${MAP.n} images. Toucher pour lire une valeur.`;
+}
+function hsl2rgb(h,s,l){
+  const a=s*Math.min(l,1-l);
+  const f=n=>{const k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1))));};
+  return [f(0),f(8),f(4)];
+}
+$("mapC").addEventListener("pointerdown",e=>{
+  if(!MAP)return;
+  const c=$("mapC"),r=c.getBoundingClientRect(),sc=v2c();
+  const vx=(e.clientX-r.left)*(c.width/r.width)/sc,vy=(e.clientY-r.top)*(c.width/r.width)/sc;
+  const gx=Math.floor((vx-MAP.roi.x)/MAP.roi.w*MAP.gw),gy=Math.floor((vy-MAP.roi.y)/MAP.roi.h*MAP.gh);
+  if(gx<0||gy<0||gx>=MAP.gw||gy>=MAP.gh)return;
+  const i=gy*MAP.gw+gx,v=mapValues()[i];
+  let txt=`pixel (${gx},${gy}) : ${isFinite(v)?fmtF(v,3):"—"} `+($("mapModeSel").value==="raw"?"σ niv.gris":"px");
+  if(MAP.f0>0)txt+=` · phase ${fmtF(MAP.phase[i]*180/Math.PI,0)}°`;
+  $("mapInfo").textContent=txt;
+});
+for(const id of["mapModeSel","mapOpIn"])$(id).addEventListener("input",()=>{
+  $("mapOpVal").textContent=$("mapOpIn").value;renderMap();
+});
+
+/* ═══════════════ MAGNIFICATION EULÉRIENNE (lecture) ═══════════════ */
+const EV={r1:null,r2:null,gw:0,gh:0,lastT:0,cv:document.createElement("canvas")};
+function evReset(){EV.r1=null;EV.lastT=0;}
+["evFl","evFh","evAlpha"].forEach(id=>$(id).addEventListener("input",()=>{
+  $("evAlphaVal").textContent=$("evAlpha").value;evReset();
+}));
+$("evChk").onchange=evReset;
+$("seekBar").addEventListener("input",evReset);
+function applyMagnify(now){
+  if(!$("evChk").checked||!S.roi||!S.loaded)return;
+  clampRoi();
+  const scale=Math.min(1,220/Math.max(S.roi.w,S.roi.h));
+  const gw=Math.max(16,Math.round(S.roi.w*scale)),gh=Math.max(16,Math.round(S.roi.h*scale));
+  const px=gw*gh;
+  if(!EV.r1||EV.gw!==gw||EV.gh!==gh){
+    EV.gw=gw;EV.gh=gh;EV.r1=new Float32Array(px);EV.r2=new Float32Array(px);
+    EV.cv.width=gw;EV.cv.height=gh;EV.init=true;
+  }
+  const ectx=EV.cv.getContext("2d",{willReadFrequently:true});
+  ectx.drawImage(video,S.roi.x,S.roi.y,S.roi.w,S.roi.h,0,0,gw,gh);
+  const idata=ectx.getImageData(0,0,gw,gh),d=idata.data;
+  const dt=EV.lastT?Math.min(0.1,(now-EV.lastT)/1000):1/60;EV.lastT=now;
+  const fl=+$("evFl").value||0.5,fh=Math.max(fl*1.2,+$("evFh").value||6);
+  const aH=1-Math.exp(-2*Math.PI*fh*dt),aL=1-Math.exp(-2*Math.PI*fl*dt);
+  const alpha=+$("evAlpha").value;
+  for(let i=0,p=0;i<px;i++,p+=4){
+    const g=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
+    if(EV.init){EV.r1[i]=g;EV.r2[i]=g;}
+    EV.r1[i]+=aH*(g-EV.r1[i]);                 // passe-bas rapide
+    EV.r2[i]+=aL*(g-EV.r2[i]);                 // passe-bas lent
+    const band=EV.r1[i]-EV.r2[i];              // passe-bande
+    const dv=alpha*band;
+    d[p]=Math.max(0,Math.min(255,d[p]+dv));
+    d[p+1]=Math.max(0,Math.min(255,d[p+1]+dv));
+    d[p+2]=Math.max(0,Math.min(255,d[p+2]+dv));
+  }
+  EV.init=false;
+  ectx.putImageData(idata,0,0);
+  const sc=v2c();
+  dctx.imageSmoothingEnabled=true;
+  dctx.drawImage(EV.cv,S.roi.x*sc,S.roi.y*sc,S.roi.w*sc,S.roi.h*sc);
+  dctx.strokeStyle="rgba(255,180,84,.9)";dctx.lineWidth=1.5;
+  dctx.strokeRect(S.roi.x*sc,S.roi.y*sc,S.roi.w*sc,S.roi.h*sc);
+  dctx.fillStyle="#FFB454";dctx.font="11px Arial";
+  dctx.fillText("×"+alpha+" (visualisation)",S.roi.x*sc+4,S.roi.y*sc+14);
+}
 
 /* ─── comparaison référence ─── */
 $("cmpBtn").onclick=()=>$("cmpIn").click();
@@ -1083,7 +1267,7 @@ $("themeBtn").onclick=()=>{
   if(S.res)postProcessAndShow();
 };
 const PARAM_IDS=["fpsIn","t0In","t1In","methodSel","searchIn","corrIn","smoothIn","hpIn","lpIn",
-  "winSel","axisSel","vminIn","unitSel","qtySel","scaleSel","fmaxIn","accUnitSel","calMm"];
+  "winSel","axisSel","vminIn","unitSel","qtySel","scaleSel","fmaxIn","accUnitSel","calMm","mapF0In","evFl","evFh"];
 function saveParams(){
   const o={};for(const id of PARAM_IDS)o[id]=$(id).value;
   for(const id of["demeanChk","detrendChk","subpxChk","interpChk"])o[id]=$(id).checked;

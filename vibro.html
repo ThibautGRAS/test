@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Vibro-Caméra — vibrométrie visuelle</title>
+<style>
+  :root{
+    --navy:#001E50; --navy-2:#04275f; --navy-3:#0a3170;
+    --red:#EF3346; --cyan:#4FD1E8; --amber:#FFB454; --green:#43D9A3;
+    --ink:#EAF0FA; --muted:#8FA3C8; --line:rgba(143,163,200,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--navy);color:var(--ink);
+    font-family:"Arial Nova",Arial,Helvetica,sans-serif;overscroll-behavior:none}
+  body{padding:max(10px,env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom));
+    max-width:560px;margin:0 auto}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  header{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:2px solid var(--red);padding-bottom:8px;margin-bottom:10px}
+  h1{font-size:15px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  h1 span{color:var(--red)}
+  .brand{font-size:10px;color:var(--muted);letter-spacing:1.5px}
+
+  .panel{background:var(--navy-2);border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;margin-bottom:10px}
+  .panel-h{display:flex;justify-content:space-between;align-items:center;
+    padding:6px 10px;border-bottom:1px solid var(--line)}
+  .panel-h .t{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .panel-h .s{font-size:10px;color:var(--muted)}
+
+  /* vidéo + ROI */
+  .vid-wrap{position:relative;background:#000}
+  video{display:block;width:100%;max-height:46vh;object-fit:contain}
+  #roi{position:absolute;border:2px solid var(--red);border-radius:4px;
+    box-shadow:0 0 0 9999px rgba(0,10,35,.45);touch-action:none;cursor:move}
+  #roi .grip{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;
+    border-right:4px solid var(--red);border-bottom:4px solid var(--red);
+    border-radius:0 0 6px 0}
+  #roi .tag{position:absolute;top:-20px;left:-2px;background:var(--red);color:#fff;
+    font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px}
+  #startOverlay{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;
+    align-items:center;justify-content:center;background:rgba(0,30,80,.86);text-align:center;padding:20px}
+  #startOverlay p{font-size:12px;color:var(--muted);line-height:1.5;max-width:300px}
+
+  .readouts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+  .ro{background:var(--navy-2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+  .ro .lbl{font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  .ro .val{font-size:15px;font-weight:700;margin-top:2px;white-space:nowrap}
+  .ro .val small{font-size:9px;font-weight:400;color:var(--muted)}
+  #peakVal{color:var(--amber)}
+
+  canvas.plot{display:block;width:100%}
+  #traceC{height:80px} #specC{height:150px}
+
+  .controls{display:flex;gap:8px;margin-bottom:10px}
+  button{font-family:inherit;font-size:13px;font-weight:700;border:none;border-radius:8px;
+    color:#fff;cursor:pointer;padding:10px 12px}
+  #runBtn{flex:1.3;background:var(--red)}
+  #runBtn.off{background:var(--green);color:var(--navy)}
+  #sigBtn{flex:1;background:var(--navy-3);border:1px solid var(--line)}
+  #csvBtn{flex:.7;background:var(--navy-3);border:1px solid var(--line)}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.4}
+
+  .alias{font-size:10px;color:var(--muted);padding:5px 10px;border-top:1px solid var(--line)}
+  .alias b{color:var(--amber)}
+  .note{font-size:11px;line-height:1.5;color:var(--muted);padding:0 2px}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vibro<span>-Caméra</span></h1>
+  <div class="brand">CETIM · vibrométrie visuelle</div>
+</header>
+
+<div class="panel">
+  <div class="panel-h"><span class="t">Caméra — placer la ROI sur la surface vibrante</span><span class="s mono" id="resVal">—</span></div>
+  <div class="vid-wrap" id="vidWrap">
+    <video id="video" playsinline muted autoplay></video>
+    <div id="roi" hidden><span class="tag">ROI</span><span class="grip"></span></div>
+    <div id="startOverlay">
+      <button id="startBtn" style="background:var(--red);padding:12px 24px">▶ Démarrer la caméra</button>
+      <p>Cale le téléphone (trépied, appui) : l'appareil mesure la vibration de la <b>scène</b>, pas la sienne. Zone contrastée ou texturée = meilleur signal.</p>
+    </div>
+  </div>
+</div>
+
+<div class="readouts">
+  <div class="ro"><div class="lbl">Cadence eff.</div><div class="val mono" id="fsVal">—<small> Hz</small></div></div>
+  <div class="ro"><div class="lbl">Netteté</div><div class="val mono" id="shVal">—</div></div>
+  <div class="ro"><div class="lbl">Pic</div><div class="val mono" id="peakVal">—<small> Hz</small></div></div>
+  <div class="ro"><div class="lbl">Nyquist</div><div class="val mono" id="nyqVal">—<small> Hz</small></div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-h"><span class="t">Signal temporel</span><span class="s" id="sigLbl">netteté (var. Laplacien)</span></div>
+  <canvas id="traceC" class="plot"></canvas>
+</div>
+
+<div class="panel">
+  <div class="panel-h"><span class="t">Spectre (FFT 256, Hann)</span><span class="s mono" id="dfVal">—</span></div>
+  <canvas id="specC" class="plot"></canvas>
+  <div class="alias" id="aliasTxt">Au-delà de Nyquist, les fréquences se replient : un pic affiché à f peut venir de fs−f, fs+f, 2fs−f…</div>
+</div>
+
+<div class="controls">
+  <button id="runBtn" disabled>⏸ Pause</button>
+  <button id="sigBtn" disabled>Signal : netteté</button>
+  <button id="csvBtn" disabled>CSV</button>
+</div>
+
+<p class="note">
+  Principe (vibrométrie visuelle, lignée MIT CSAIL) : une surface qui vibre pendant l'exposition crée un
+  micro-flou de bougé → la <b>netteté locale</b> (variance du Laplacien) et l'<b>intensité moyenne</b>
+  des pixels de la ROI oscillent au rythme de la vibration. La FFT de ce signal donne le spectre.
+  Limite : l'échantillonnage se fait à la cadence caméra (~30–60 Hz), donc mesure propre
+  jusqu'à <b>fs/2</b> seulement — au-delà, repliement (une raie à 100 Hz filmée à 60 fps apparaît à 20 Hz).
+</p>
+
+<script>
+"use strict";
+/* ================== DSP : FFT radix-2 + fenêtre + pic ================== */
+function fft(re, im){
+  const n = re.length;
+  for(let i=1,j=0;i<n;i++){                 // bit-reversal
+    let bit=n>>1;
+    for(;j&bit;bit>>=1) j^=bit;
+    j^=bit;
+    if(i<j){ let t=re[i];re[i]=re[j];re[j]=t; t=im[i];im[i]=im[j];im[j]=t; }
+  }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){
+      let cr=1, ci=0;
+      for(let k=0;k<len/2;k++){
+        const ur=re[i+k], ui=im[i+k];
+        const vr=re[i+k+len/2]*cr - im[i+k+len/2]*ci;
+        const vi=re[i+k+len/2]*ci + im[i+k+len/2]*cr;
+        re[i+k]=ur+vr; im[i+k]=ui+vi;
+        re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi;
+        const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+      }
+    }
+  }
+}
+function spectrum(samples){                  // → magnitudes [0..N/2]
+  const N=samples.length;
+  const re=new Float64Array(N), im=new Float64Array(N);
+  let mean=0; for(const v of samples) mean+=v; mean/=N;
+  for(let i=0;i<N;i++){
+    const w=0.5*(1-Math.cos(2*Math.PI*i/(N-1)));  // Hann
+    re[i]=(samples[i]-mean)*w;
+  }
+  fft(re,im);
+  const mag=new Float64Array(N/2+1);
+  for(let k=0;k<=N/2;k++) mag[k]=Math.hypot(re[k],im[k])/N;
+  return mag;
+}
+function findPeak(mag, df){                  // interpolation parabolique
+  let k=2, m=0;
+  for(let i=2;i<mag.length-1;i++) if(mag[i]>m){m=mag[i];k=i;}
+  if(m<=0) return {f:0, a:0};
+  const a=mag[k-1], b=mag[k], c=mag[k+1];
+  const d=(a-c)/(2*(a-2*b+c)||1);
+  return {f:(k+d)*df, a:b};
+}
+
+/* ================== capture & mesure ================== */
+const N_FFT=256, ROI_PX=96;
+const video=document.getElementById("video"), vidWrap=document.getElementById("vidWrap"),
+      roiEl=document.getElementById("roi");
+const grab=document.createElement("canvas"); grab.width=ROI_PX; grab.height=ROI_PX;
+const gctx=grab.getContext("2d",{willReadFrequently:true});
+
+const buf={t:[], sharp:[], inten:[]};        // séries temporelles complètes (CSV)
+const ring=new Float64Array(N_FFT); let ringN=0;
+let running=false, useSharp=true, fsEst=0, lastTs=0, mag=null, df=0, peak={f:0,a:0};
+
+function measure(){
+  // ROI (coords overlay) → coords vidéo natives
+  const vw=video.videoWidth, vh=video.videoHeight;
+  if(!vw) return;
+  const r=roiEl.getBoundingClientRect(), w=vidWrap.getBoundingClientRect();
+  const sc=Math.min(w.width/vw, w.height/vh);          // object-fit:contain
+  const ox=(w.width-vw*sc)/2, oy=(w.height-vh*sc)/2;
+  const sx=Math.max(0,(r.left-w.left-ox)/sc), sy=Math.max(0,(r.top-w.top-oy)/sc);
+  const sw=Math.min(vw-sx, r.width/sc), sh=Math.min(vh-sy, r.height/sc);
+  if(sw<8||sh<8) return;
+
+  gctx.drawImage(video, sx,sy,sw,sh, 0,0,ROI_PX,ROI_PX);
+  const d=gctx.getImageData(0,0,ROI_PX,ROI_PX).data;
+
+  // niveaux de gris + Laplacien 4-voisins
+  const g=new Float32Array(ROI_PX*ROI_PX);
+  let inten=0;
+  for(let i=0,p=0;i<g.length;i++,p+=4){
+    g[i]=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
+    inten+=g[i];
+  }
+  inten/=g.length;
+  let sum=0,sum2=0,n=0;
+  for(let y=1;y<ROI_PX-1;y++)for(let x=1;x<ROI_PX-1;x++){
+    const i=y*ROI_PX+x;
+    const L=g[i-1]+g[i+1]+g[i-ROI_PX]+g[i+ROI_PX]-4*g[i];
+    sum+=L; sum2+=L*L; n++;
+  }
+  const sharp=sum2/n-(sum/n)**2;             // variance du Laplacien
+  return {sharp, inten};
+}
+
+function onFrame(now, meta){
+  if(running){
+    const ts=(meta&&meta.mediaTime!=null)? meta.mediaTime*1000 : now;
+    if(lastTs){
+      const dt=ts-lastTs;
+      if(dt>1) fsEst = fsEst? fsEst*0.92 + (1000/dt)*0.08 : 1000/dt;
+    }
+    lastTs=ts;
+    const m=measure();
+    if(m){
+      const v=useSharp? m.sharp : m.inten;
+      buf.t.push(ts/1000); buf.sharp.push(m.sharp); buf.inten.push(m.inten);
+      if(buf.t.length>6000){buf.t.shift();buf.sharp.shift();buf.inten.shift();}
+      ring[ringN%N_FFT]=v; ringN++;
+      if(ringN>=N_FFT && ringN%8===0){        // FFT rafraîchie tous les 8 échantillons
+        const s=new Float64Array(N_FFT);
+        for(let i=0;i<N_FFT;i++) s[i]=ring[(ringN-N_FFT+i)%N_FFT];
+        mag=spectrum(s);
+        df=fsEst/N_FFT;
+        peak=findPeak(mag,df);
+      }
+      updateUI(m);
+    }
+  }
+  if(video.requestVideoFrameCallback) video.requestVideoFrameCallback(onFrame);
+  else requestAnimationFrame(t=>onFrame(t,null));
+}
+
+/* ================== rendu ================== */
+const traceC=document.getElementById("traceC"), specC=document.getElementById("specC");
+const tctx=traceC.getContext("2d"), sctx=specC.getContext("2d");
+function fit(cv){const dpr=Math.min(devicePixelRatio||1,2);const r=cv.getBoundingClientRect();
+  cv.width=r.width*dpr;cv.height=r.height*dpr;cv.getContext("2d").setTransform(dpr,0,0,dpr,0,0);return r;}
+let trR,spR;
+function layout(){trR=fit(traceC);spR=fit(specC);placeRoiDefault();}
+addEventListener("resize",layout);
+
+function drawTrace(){
+  const w=trR.width,h=trR.height;
+  tctx.fillStyle="#021740";tctx.fillRect(0,0,w,h);
+  const src=useSharp?buf.sharp:buf.inten;
+  const n=Math.min(src.length, 300);
+  if(n<4) return;
+  let mn=1e18,mx=-1e18;
+  for(let i=src.length-n;i<src.length;i++){mn=Math.min(mn,src[i]);mx=Math.max(mx,src[i]);}
+  const sp=(mx-mn)||1;
+  tctx.strokeStyle="#4FD1E8";tctx.lineWidth=1.4;tctx.beginPath();
+  for(let i=0;i<n;i++){
+    const v=src[src.length-n+i];
+    const x=i/(n-1)*w, y=h-6-(v-mn)/sp*(h-12);
+    i?tctx.lineTo(x,y):tctx.moveTo(x,y);
+  }
+  tctx.stroke();
+}
+function drawSpec(){
+  const w=spR.width,h=spR.height;
+  sctx.fillStyle="#021740";sctx.fillRect(0,0,w,h);
+  if(!mag||!fsEst) return;
+  const nb=mag.length, fN=fsEst/2;
+  // grille 5 Hz
+  sctx.strokeStyle="rgba(143,163,200,.15)";sctx.fillStyle="var(--muted)";
+  sctx.font="9px Arial";sctx.fillStyle="#8FA3C8";
+  for(let f=5;f<fN;f+=5){
+    const x=f/fN*w;
+    sctx.beginPath();sctx.moveTo(x,0);sctx.lineTo(x,h);sctx.stroke();
+    sctx.fillText(f+"",x+2,h-4);
+  }
+  let m=0;for(let i=2;i<nb;i++)m=Math.max(m,mag[i]);
+  if(m<=0)return;
+  sctx.fillStyle="#4FD1E8";
+  const bw=Math.max(1,w/nb);
+  for(let i=2;i<nb;i++){
+    const bh=mag[i]/m*(h-16);
+    sctx.fillRect(i/nb*w, h-12-bh, bw, bh);
+  }
+  // marqueur de pic
+  if(peak.f>0){
+    const x=peak.f/fN*w;
+    sctx.strokeStyle="#FFB454";sctx.lineWidth=1.5;
+    sctx.beginPath();sctx.moveTo(x,4);sctx.lineTo(x,h-12);sctx.stroke();
+  }
+}
+
+/* ================== UI ================== */
+const fsVal=document.getElementById("fsVal"),shVal=document.getElementById("shVal"),
+      peakVal=document.getElementById("peakVal"),nyqVal=document.getElementById("nyqVal"),
+      dfVal=document.getElementById("dfVal"),aliasTxt=document.getElementById("aliasTxt"),
+      resVal=document.getElementById("resVal"),sigLbl=document.getElementById("sigLbl");
+let uiTick=0;
+function updateUI(m){
+  drawTrace();
+  if(++uiTick%4) return;                      // texte rafraîchi 1 fois sur 4
+  drawSpec();
+  fsVal.innerHTML=fsEst.toFixed(1)+"<small> Hz</small>";
+  nyqVal.innerHTML=(fsEst/2).toFixed(1)+"<small> Hz</small>";
+  shVal.textContent=m.sharp.toFixed(0);
+  dfVal.textContent=df?("Δf "+df.toFixed(2)+" Hz"):"—";
+  if(peak.f>0){
+    peakVal.innerHTML=peak.f.toFixed(1)+"<small> Hz</small>";
+    const fs=fsEst, cands=[fs-peak.f, fs+peak.f, 2*fs-peak.f].map(v=>v.toFixed(0)).join(" / ");
+    aliasTxt.innerHTML=`Pic à <b>${peak.f.toFixed(1)} Hz</b>. Si la source est au-delà de Nyquist (${(fs/2).toFixed(0)} Hz), fréquences réelles candidates : <b>${cands} Hz</b>.`;
+  }
+}
+
+/* ================== ROI drag/resize (pointer events) ================== */
+function placeRoiDefault(){
+  const w=vidWrap.getBoundingClientRect();
+  if(!w.width) return;
+  roiEl.style.width="42%";roiEl.style.height="34%";
+  roiEl.style.left=(w.width*0.29)+"px";roiEl.style.top=(w.height*0.33)+"px";
+}
+let drag=null;
+roiEl.addEventListener("pointerdown",e=>{
+  const r=roiEl.getBoundingClientRect();
+  const resize = (e.clientX>r.right-32 && e.clientY>r.bottom-32);
+  drag={x:e.clientX,y:e.clientY,l:roiEl.offsetLeft,t:roiEl.offsetTop,
+        w:roiEl.offsetWidth,h:roiEl.offsetHeight,resize};
+  roiEl.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+roiEl.addEventListener("pointermove",e=>{
+  if(!drag)return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  const w=vidWrap.getBoundingClientRect();
+  if(drag.resize){
+    roiEl.style.width=Math.max(50,Math.min(w.width-drag.l,drag.w+dx))+"px";
+    roiEl.style.height=Math.max(50,Math.min(w.height-drag.t,drag.h+dy))+"px";
+  }else{
+    roiEl.style.left=Math.max(0,Math.min(w.width-drag.w,drag.l+dx))+"px";
+    roiEl.style.top=Math.max(0,Math.min(w.height-drag.h,drag.t+dy))+"px";
+  }
+});
+roiEl.addEventListener("pointerup",()=>drag=null);
+
+/* ================== contrôles ================== */
+const startBtn=document.getElementById("startBtn"),runBtn=document.getElementById("runBtn"),
+      sigBtn=document.getElementById("sigBtn"),csvBtn=document.getElementById("csvBtn");
+startBtn.onclick=async()=>{
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment",width:{ideal:1280},frameRate:{ideal:60}},audio:false});
+    video.srcObject=stream;
+    await video.play();
+    document.getElementById("startOverlay").hidden=true;
+    roiEl.hidden=false;
+    resVal.textContent=video.videoWidth+"×"+video.videoHeight;
+    layout();
+    running=true;
+    runBtn.disabled=sigBtn.disabled=csvBtn.disabled=false;
+    if(video.requestVideoFrameCallback) video.requestVideoFrameCallback(onFrame);
+    else requestAnimationFrame(t=>onFrame(t,null));
+  }catch(err){
+    alert("Accès caméra refusé ou indisponible : "+err.message+
+      "\nL'appli doit être servie en HTTPS (GitHub Pages OK).");
+  }
+};
+runBtn.onclick=()=>{
+  running=!running; lastTs=0;
+  runBtn.textContent=running?"⏸ Pause":"▶ Mesure";
+  runBtn.classList.toggle("off",!running);
+};
+sigBtn.onclick=()=>{
+  useSharp=!useSharp; ringN=0; mag=null;
+  sigBtn.textContent="Signal : "+(useSharp?"netteté":"intensité");
+  sigLbl.textContent=useSharp?"netteté (var. Laplacien)":"intensité moyenne";
+};
+csvBtn.onclick=()=>{
+  let csv="t_s;nettete;intensite\n";
+  for(let i=0;i<buf.t.length;i++)
+    csv+=buf.t[i].toFixed(4)+";"+buf.sharp[i].toFixed(2)+";"+buf.inten[i].toFixed(2)+"\n";
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="vibro_camera.csv"; a.click();
+  URL.revokeObjectURL(a.href);
+};
+layout();
+</script>
+</body>
+</html>

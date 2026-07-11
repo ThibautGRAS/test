@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibro-Vidéo — analyse vibratoire par vidéo</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  :root{
+    --navy:#001E50; --navy-2:#04275f; --navy-3:#0a3170;
+    --red:#EF3346; --cyan:#4FD1E8; --amber:#FFB454; --green:#43D9A3;
+    --ink:#EAF0FA; --muted:#8FA3C8; --line:rgba(143,163,200,.22);
+    --plotbg:#021740;
+  }
+  body.light{
+    --navy:#F2F5FA; --navy-2:#FFFFFF; --navy-3:#E4EAF4;
+    --ink:#0B1E3C; --muted:#5A6E92; --line:rgba(0,30,80,.18); --plotbg:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--navy);color:var(--ink);
+    font-family:"Arial Nova",Arial,Helvetica,sans-serif}
+  body{padding:max(10px,env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom));
+    max-width:860px;margin:0 auto}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  header{display:flex;align-items:center;justify-content:space-between;
+    border-bottom:2px solid var(--red);padding-bottom:8px;margin-bottom:8px}
+  h1{font-size:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  h1 span{color:var(--red)}
+  .brand{font-size:10px;color:var(--muted);letter-spacing:1.5px}
+  #themeBtn{background:none;border:1px solid var(--line);color:var(--ink);
+    border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;margin-left:8px}
+
+  .privacy{font-size:11px;color:var(--muted);background:var(--navy-2);
+    border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:10px}
+  .privacy b{color:var(--green)}
+
+  details{background:var(--navy-2);border:1px solid var(--line);border-radius:8px;
+    margin-bottom:10px;overflow:hidden}
+  summary{padding:9px 12px;font-size:11px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;color:var(--muted);cursor:pointer;user-select:none;list-style:none}
+  summary::before{content:"▸ ";color:var(--red)}
+  details[open] summary::before{content:"▾ "}
+  .body{padding:10px 12px;border-top:1px solid var(--line)}
+
+  button{font-family:inherit;font-size:13px;font-weight:700;border:none;border-radius:8px;
+    color:#fff;background:var(--navy-3);border:1px solid var(--line);cursor:pointer;padding:9px 12px}
+  body.light button{color:var(--ink)}
+  button.primary{background:var(--red);border:none;color:#fff}
+  button.small{font-size:11px;padding:6px 9px;font-weight:400}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.4;pointer-events:none}
+  button.on{outline:2px solid var(--cyan)}
+
+  input,select{font-family:inherit;font-size:13px;color:var(--ink);
+    background:var(--navy-3);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+  input[type=checkbox]{width:auto}
+  label{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink)}
+
+  .meta{font-size:11px;color:var(--muted);line-height:1.6}
+  .meta b{color:var(--ink)}
+  .warn{font-size:11px;color:var(--amber);margin-top:6px}
+  .alertbox{font-size:11px;color:var(--red);margin-top:6px;white-space:pre-line}
+
+  /* lecteur */
+  .vid-wrap{position:relative;background:#000;border-radius:6px;overflow:hidden;touch-action:none}
+  #dispC{display:block;width:100%;cursor:crosshair}
+  .player{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .player .mono{font-size:11px;color:var(--muted)}
+  #seekBar{flex:1;min-width:120px}
+  input[type=range]{padding:0;accent-color:var(--red)}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:6px;margin-bottom:8px}
+  .st{background:var(--navy-3);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+  .st .lbl{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  .st .val{font-size:14px;font-weight:700;margin-top:2px;white-space:nowrap}
+  .st .val small{font-size:9px;font-weight:400;color:var(--muted)}
+
+  .plot{width:100%;min-height:260px}
+  #progWrap{display:none;margin-top:8px}
+  #progBar{height:8px;background:var(--navy-3);border-radius:4px;overflow:hidden}
+  #progFill{height:100%;width:0;background:var(--red);transition:width .15s}
+  #progTxt{font-size:11px;color:var(--muted);margin-top:4px}
+
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  th,td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+
+  .verdict{font-size:13px;font-weight:700;padding:8px 10px;border-radius:6px;margin-top:8px;display:none}
+  .verdict.stable{background:rgba(67,217,163,.15);color:var(--green);display:block}
+  .verdict.moderate{background:rgba(255,180,84,.15);color:var(--amber);display:block}
+  .verdict.high{background:rgba(239,51,70,.15);color:var(--red);display:block}
+
+  ul.tips{font-size:12px;line-height:1.7;color:var(--muted);padding-left:18px}
+  .hint{font-size:10px;color:var(--muted);margin-top:2px}
+  h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:12px 0 6px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vibro<span>-Vidéo</span></h1>
+  <div class="row">
+    <span class="brand">CETIM · maintenance vibratoire</span>
+    <button id="themeBtn" title="Basculer clair / sombre">☀︎</button>
+  </div>
+</header>
+
+<div class="privacy"><b>100 % local :</b> la vidéo est traitée dans le navigateur, rien n'est envoyé sur un serveur. Les paramètres sont mémorisés sur cet appareil (localStorage).</div>
+
+<!-- ============ 1. IMPORT ============ -->
+<details open id="secImport">
+<summary>1 · Vidéo & framerate</summary>
+<div class="body">
+  <div class="row">
+    <button class="primary" id="importBtn">Importer une vidéo</button>
+    <button id="demoBtn" title="Génère un signal sinusoïdal 20 Hz synthétique pour tester les graphiques sans vidéo">Charger une démonstration</button>
+    <input type="file" id="fileIn" accept="video/mp4,video/quicktime,video/webm,video/*" hidden>
+  </div>
+  <div class="meta" id="fileMeta" style="margin-top:8px">Aucune vidéo chargée.</div>
+  <div class="grid" style="margin-top:8px">
+    <div>
+      <label for="fpsIn" title="Cadence réelle d'acquisition de la vidéo">Framerate (fps)</label>
+      <input type="number" id="fpsIn" value="240" min="1" step="1">
+    </div>
+    <div>
+      <label>Valeurs rapides</label>
+      <div class="row">
+        <button class="small fpsQ" data-v="30">30</button>
+        <button class="small fpsQ" data-v="60">60</button>
+        <button class="small fpsQ" data-v="120">120</button>
+        <button class="small fpsQ" data-v="240">240</button>
+      </div>
+    </div>
+  </div>
+  <div class="warn" id="nyqWarn">Fréquence maximale théorique (Nyquist) : fs/2. En pratique, rester sous ≈ 40–45 % du framerate.</div>
+</div>
+</details>
+
+<!-- ============ 2. LECTEUR + SÉLECTION ============ -->
+<details open id="secPlayer">
+<summary>2 · Lecteur, ROI & calibration</summary>
+<div class="body">
+  <div class="vid-wrap"><canvas id="dispC" width="640" height="360"></canvas></div>
+  <div class="player">
+    <button class="small" id="firstBtn" title="Retour à l'image de référence">⏮</button>
+    <button class="small" id="prevBtn" title="Image précédente">−1</button>
+    <button class="small" id="playBtn" title="Lecture / pause (Espace)">▶</button>
+    <button class="small" id="nextBtn" title="Image suivante">+1</button>
+    <input type="range" id="seekBar" min="0" max="1000" value="0">
+    <span class="mono" id="tcVal">img 0 · 0.000 s</span>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button id="modeRoiBtn" class="on" title="Cliquer = point (ROI 32 px) ou tracer un rectangle. Glisser pour déplacer, coin bas-droit pour redimensionner.">Mode : sélection ROI</button>
+    <button id="modeCalBtn" title="Tracer une ligne entre deux points de distance connue">Mode : calibration</button>
+    <button class="small" id="resetSelBtn">Réinitialiser sélection</button>
+  </div>
+  <div class="grid" style="margin-top:8px">
+    <div>
+      <label for="calMm">Distance réelle de la ligne (mm)</label>
+      <input type="number" id="calMm" value="100" min="0.1" step="0.1">
+    </div>
+    <div>
+      <label>Calibration</label>
+      <div class="meta"><b id="calVal">non calibré</b><br><span id="roiVal">ROI : non définie</span></div>
+    </div>
+    <div>
+      <label for="unitSel">Affichage déplacement</label>
+      <select id="unitSel">
+        <option value="px">pixels</option>
+        <option value="mm">mm (nécessite calibration)</option>
+        <option value="um">µm (nécessite calibration)</option>
+      </select>
+    </div>
+  </div>
+</div>
+</details>
+
+<!-- ============ 3. PARAMÈTRES ============ -->
+<details open id="secParams">
+<summary>3 · Paramètres d'analyse</summary>
+<div class="body">
+  <div class="grid">
+    <div><label for="t0In" title="Début de la portion analysée">Temps début (s)</label><input type="number" id="t0In" value="0" min="0" step="0.1"></div>
+    <div><label for="t1In" title="Fin de la portion analysée (0 = fin de vidéo)">Temps fin (s)</label><input type="number" id="t1In" value="0" min="0" step="0.1"></div>
+    <div>
+      <label for="methodSel" title="Lucas-Kanade : suivi sub-pixel itératif. Corrélation : recherche exhaustive NCC, plus robuste aux grands déplacements.">Méthode de suivi</label>
+      <select id="methodSel">
+        <option value="lk">Flux optique Lucas-Kanade</option>
+        <option value="ncc">Corrélation de zone (NCC)</option>
+      </select>
+    </div>
+    <div><label for="searchIn" title="Rayon de recherche autour de la dernière position (px)">Zone de recherche (px)</label><input type="number" id="searchIn" value="16" min="4" max="64"></div>
+    <div><label for="corrIn" title="Sous ce coefficient, le point est considéré perdu">Corrélation min.</label><input type="number" id="corrIn" value="0.5" min="0" max="1" step="0.05"></div>
+    <div><label for="smoothIn" title="Moyenne glissante (0 = aucun lissage)">Lissage (échantillons)</label><input type="number" id="smoothIn" value="0" min="0" max="25"></div>
+    <div><label for="hpIn" title="Filtre passe-haut Butterworth ordre 2 (0 = désactivé)">Passe-haut (Hz)</label><input type="number" id="hpIn" value="0" min="0" step="0.5"></div>
+    <div><label for="lpIn" title="Filtre passe-bas Butterworth ordre 2 (0 = désactivé)">Passe-bas (Hz)</label><input type="number" id="lpIn" value="0" min="0" step="0.5"></div>
+    <div>
+      <label for="winSel">Fenêtre FFT</label>
+      <select id="winSel"><option value="hann">Hann</option><option value="hamming">Hamming</option><option value="rect">Rectangulaire</option></select>
+    </div>
+    <div>
+      <label for="axisSel">Axe analysé</label>
+      <select id="axisSel"><option value="x">Horizontal X</option><option value="y">Vertical Y</option><option value="r">Résultant R</option></select>
+    </div>
+    <div><label for="vminIn" title="Sous cette fréquence, vitesse et accélération sont mises à zéro (instabilité 1/f)">Seuil BF vit./acc. (Hz)</label><input type="number" id="vminIn" value="2" min="0" step="0.5"></div>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <span class="chk"><input type="checkbox" id="demeanChk" checked><span>Suppression moyenne</span></span>
+    <span class="chk"><input type="checkbox" id="detrendChk" checked><span>Suppression dérive linéaire</span></span>
+    <span class="chk"><input type="checkbox" id="subpxChk" checked><span>Interpolation sub-pixel</span></span>
+    <span class="chk"><input type="checkbox" id="interpChk" checked><span>Interpoler pertes courtes (≤5)</span></span>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="primary" id="runBtn" disabled>Lancer l'analyse</button>
+    <button id="stopBtn" disabled>Arrêter</button>
+  </div>
+  <div id="progWrap">
+    <div id="progBar"><div id="progFill"></div></div>
+    <div id="progTxt" class="mono">—</div>
+  </div>
+  <div class="alertbox" id="alertBox"></div>
+</div>
+</details>
+
+<!-- ============ 4. RÉSULTATS TEMPORELS ============ -->
+<details id="secTime">
+<summary>4 · Signaux temporels & statistiques</summary>
+<div class="body">
+  <div class="stats" id="statsBox"></div>
+  <div id="timePlot" class="plot"></div>
+</div>
+</details>
+
+<!-- ============ 5. SPECTRE ============ -->
+<details id="secSpec">
+<summary>5 · Analyse fréquentielle</summary>
+<div class="body">
+  <div class="grid">
+    <div>
+      <label for="qtySel">Grandeur</label>
+      <select id="qtySel">
+        <option value="d">Déplacement</option>
+        <option value="v">Vitesse (V = 2πf·X)</option>
+        <option value="a">Accélération (A = (2πf)²·X)</option>
+      </select>
+    </div>
+    <div>
+      <label for="scaleSel">Échelle amplitude</label>
+      <select id="scaleSel"><option value="lin">Linéaire</option><option value="log">Logarithmique</option></select>
+    </div>
+    <div><label for="fmaxIn" title="0 = jusqu'à Nyquist">Fréq. max affichée (Hz)</label><input type="number" id="fmaxIn" value="0" min="0"></div>
+    <div>
+      <label for="accUnitSel">Unité accélération</label>
+      <select id="accUnitSel"><option value="ms2">m/s²</option><option value="g">g</option></select>
+    </div>
+  </div>
+  <div class="meta" id="specMeta" style="margin:8px 0"></div>
+  <div id="specPlot" class="plot"></div>
+  <h3>Pics principaux</h3>
+  <table><thead><tr><th>#</th><th>Fréquence</th><th>Amplitude</th></tr></thead><tbody id="peaksBody"></tbody></table>
+</div>
+</details>
+
+<!-- ============ 6. VISUALISATION AMPLIFIÉE ============ -->
+<details id="secAmp">
+<summary>6 · Mouvement amplifié (visualisation seulement)</summary>
+<div class="body">
+  <div class="warn">Mode illustratif : la trajectoire est amplifiée artificiellement, ce n'est pas la mesure réelle.</div>
+  <div class="grid" style="margin:8px 0">
+    <div><label for="ampIn">Amplification ×<span id="ampVal">25</span></label><input type="range" id="ampIn" min="1" max="100" value="25"></div>
+    <div><label for="ampSpeed">Vitesse de lecture</label>
+      <select id="ampSpeed"><option value="0.1">0.1×</option><option value="0.25" selected>0.25×</option><option value="1">1×</option></select></div>
+    <div><label>&nbsp;</label><button id="ampPlayBtn">▶ Rejouer</button></div>
+  </div>
+  <div class="vid-wrap"><canvas id="ampC" width="640" height="360"></canvas></div>
+</div>
+</details>
+
+<!-- ============ 7. COMPARAISON ============ -->
+<details id="secCmp">
+<summary>7 · Comparaison avec une référence</summary>
+<div class="body">
+  <div class="row">
+    <button id="cmpBtn">Importer spectre de référence (CSV)</button>
+    <input type="file" id="cmpIn" accept=".csv,text/csv" hidden>
+    <span class="meta" id="cmpMeta">Format attendu : le CSV « spectre » exporté par cette appli (f_Hz;amplitude).</span>
+  </div>
+  <div class="verdict" id="verdictBox"></div>
+  <div class="meta" id="cmpDetail" style="margin-top:6px"></div>
+  <div class="hint">Indicateur exploratoire — ne constitue pas un diagnostic automatique certifié.</div>
+</div>
+</details>
+
+<!-- ============ 8. EXPORT & RAPPORT ============ -->
+<details id="secExp">
+<summary>8 · Export & rapport de synthèse</summary>
+<div class="body">
+  <div class="row">
+    <button class="small" id="expTimeBtn">CSV temporel</button>
+    <button class="small" id="expSpecBtn">CSV spectre</button>
+    <button class="small" id="expJsonBtn">JSON synthèse</button>
+    <button class="small" id="expPngBtn">PNG spectre</button>
+    <button class="small" id="expRepBtn">Rapport HTML</button>
+  </div>
+  <h3>Synthèse</h3>
+  <div class="meta" id="reportBox">Lancer une analyse pour générer la synthèse.</div>
+</div>
+</details>
+
+<!-- ============ 9. CONSEILS IPHONE ============ -->
+<details>
+<summary>9 · Précautions vidéos iPhone</summary>
+<div class="body">
+  <ul class="tips">
+    <li>Utiliser la caméra arrière principale <b>1×</b> (pas d'ultra grand-angle ni de zoom numérique)</li>
+    <li>Fixer l'iPhone sur un <b>trépied</b> — toute vibration du téléphone se superpose à la mesure</li>
+    <li>Beaucoup de lumière (le ralenti réduit fortement le temps d'exposition)</li>
+    <li>Désactiver si possible stabilisation et autofocus (verrouiller AE/AF par appui long)</li>
+    <li>Exporter la vidéo <b>originale sans conversion</b> (AirDrop / Fichiers, pas de compression Messages)</li>
+    <li>Vérifier le <b>véritable framerate</b> : Réglages → Appareil photo → Ralenti (120 ou 240 fps)</li>
+    <li>Tenir compte du <b>rolling shutter</b> : les lignes du capteur ne sont pas exposées au même instant</li>
+    <li>Ne pas exploiter la méthode au-delà d'environ <b>40 à 45 % du framerate</b></li>
+    <li>Privilégier des <b>marqueurs contrastés</b> (pastille, croix, arête franche) sur la machine</li>
+  </ul>
+</div>
+</details>
+
+<script>
+"use strict";
+/* ═══════════════════ 0. UTILITAIRES & DSP ═══════════════════ */
+const $=id=>document.getElementById(id);
+const fmtF=(v,d=2)=>isFinite(v)?v.toFixed(d):"—";
+
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;
+    if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){let cr=1,ci=0;
+      for(let k=0;k<len/2;k++){
+        const ur=re[i+k],ui=im[i+k];
+        const vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci;
+        const vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;
+        re[i+k]=ur+vr;im[i+k]=ui+vi;re[i+k+len/2]=ur-vr;im[i+k+len/2]=ui-vi;
+        const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t;}}}
+}
+function makeWindow(n,type){
+  const w=new Float64Array(n);
+  for(let i=0;i<n;i++){
+    if(type==="hann")w[i]=0.5*(1-Math.cos(2*Math.PI*i/(n-1)));
+    else if(type==="hamming")w[i]=0.54-0.46*Math.cos(2*Math.PI*i/(n-1));
+    else w[i]=1;
+  }
+  return w;
+}
+/* spectre d'amplitude normalisé : un sinus d'amplitude A → pic ≈ A */
+function ampSpectrum(sig,fs,winType){
+  let N=1;while(N<sig.length)N<<=1;          // zero-padding à 2^k
+  const re=new Float64Array(N),im=new Float64Array(N);
+  const w=makeWindow(sig.length,winType);
+  let cg=0;for(const v of w)cg+=v;cg/=sig.length;   // gain cohérent
+  for(let i=0;i<sig.length;i++)re[i]=sig[i]*w[i];
+  fft(re,im);
+  const nb=N/2+1,f=new Float64Array(nb),a=new Float64Array(nb);
+  for(let k=0;k<nb;k++){
+    f[k]=k*fs/N;
+    a[k]=2*Math.hypot(re[k],im[k])/(sig.length*cg);
+    if(k===0||k===N/2)a[k]/=2;
+  }
+  return {f,a,df:fs/N,N:sig.length,Nfft:N};
+}
+function findPeaks(f,a,nMax=5){
+  const cand=[];
+  let amax=0;for(let i=1;i<a.length;i++)amax=Math.max(amax,a[i]);
+  for(let i=2;i<a.length-2;i++){
+    if(a[i]>a[i-1]&&a[i]>=a[i+1]&&a[i]>0.03*amax){
+      const d=(a[i-1]-a[i+1])/(2*(a[i-1]-2*a[i]+a[i+1])||1);
+      cand.push({f:f[i]+d*(f[1]-f[0]),a:a[i]});
+    }
+  }
+  cand.sort((p,q)=>q.a-p.a);
+  const out=[];
+  for(const p of cand){                       // séparation min 3 bins
+    if(out.every(o=>Math.abs(o.f-p.f)>3*(f[1]-f[0])))out.push(p);
+    if(out.length>=nMax)break;
+  }
+  return out;
+}
+/* Butterworth ordre 2 (biquad RBJ) appliqué aller-retour (phase nulle) */
+function biquad(sig,fc,fs,type){
+  if(!fc||fc<=0||fc>=fs/2)return sig.slice();
+  const w0=2*Math.PI*fc/fs,alpha=Math.sin(w0)/(2*Math.SQRT1_2),cw=Math.cos(w0);
+  let b0,b1,b2;
+  if(type==="lp"){b0=(1-cw)/2;b1=1-cw;b2=(1-cw)/2;}
+  else{b0=(1+cw)/2;b1=-(1+cw);b2=(1+cw)/2;}
+  const a0=1+alpha,a1=-2*cw,a2=1-alpha;
+  const run=x=>{
+    const y=new Float64Array(x.length);
+    let x1=x[0],x2=x[0],y1=x[0],y2=x[0];      // init état stationnaire
+    if(type==="hp"){x1=x2=y1=y2=0;}
+    for(let i=0;i<x.length;i++){
+      const yi=(b0*x[i]+b1*x1+b2*x2-a1*y1-a2*y2)/a0;
+      x2=x1;x1=x[i];y2=y1;y1=yi;y[i]=yi;
+    }
+    return y;
+  };
+  let y=run(Float64Array.from(sig)).reverse();
+  y=run(y).reverse();
+  return Array.from(y);
+}
+function movAvg(sig,n){
+  if(!n||n<2)return sig.slice();
+  const out=sig.slice();
+  for(let i=0;i<sig.length;i++){
+    let s=0,c=0;
+    for(let k=-Math.floor(n/2);k<=Math.floor(n/2);k++){
+      const j=i+k;if(j>=0&&j<sig.length&&isFinite(sig[j])){s+=sig[j];c++;}
+    }
+    out[i]=c?s/c:sig[i];
+  }
+  return out;
+}
+function detrend(sig,linear){
+  const n=sig.length;let out=sig.slice();
+  if(linear){
+    let sx=0,sy=0,sxx=0,sxy=0;
+    for(let i=0;i<n;i++){sx+=i;sy+=out[i];sxx+=i*i;sxy+=i*out[i];}
+    const den=n*sxx-sx*sx||1;
+    const b=(n*sxy-sx*sy)/den,a=(sy-b*sx)/n;
+    for(let i=0;i<n;i++)out[i]-=a+b*i;
+  }else{
+    let m=0;for(const v of out)m+=v;m/=n;
+    for(let i=0;i<n;i++)out[i]-=m;
+  }
+  return out;
+}
+function stats(sig){
+  const v=sig.filter(isFinite);
+  if(!v.length)return{pp:0,rms:0,max:0,mean:0,std:0};
+  let mn=1e18,mx=-1e18,s=0,s2=0;
+  for(const x of v){mn=Math.min(mn,x);mx=Math.max(mx,x);s+=x;s2+=x*x;}
+  const mean=s/v.length;
+  return{pp:mx-mn,rms:Math.sqrt(s2/v.length),max:Math.max(Math.abs(mx),Math.abs(mn)),
+         mean,std:Math.sqrt(Math.max(0,s2/v.length-mean*mean))};
+}
+
+/* ═══════════════════ 1. ÉTAT GLOBAL ═══════════════════ */
+const video=document.createElement("video");
+video.muted=true;video.playsInline=true;video.preload="auto";
+const dispC=$("dispC"),dctx=dispC.getContext("2d");
+const grabC=document.createElement("canvas"),gctx=grabC.getContext("2d",{willReadFrequently:true});
+
+const S={
+  loaded:false, fps:240, dur:0, vw:0, vh:0, fileName:"—",
+  roi:null,                 // {x,y,w,h} en px vidéo
+  cal:null,                 // {x1,y1,x2,y2}
+  mmPerPx:0,
+  mode:"roi",
+  res:null,                 // résultats {t,x,y,r,q,alerts,fs,...}
+  spec:null, refSpec:null,
+  demo:false,
+  playing:false, ampAnim:null, running:false, stop:false,
+};
+
+/* ═══════════════════ 2. IMPORT VIDÉO & DÉMO ═══════════════════ */
+$("importBtn").onclick=()=>$("fileIn").click();
+$("fileIn").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  S.demo=false;S.res=null;S.spec=null;
+  video.src=URL.createObjectURL(f);
+  S.fileName=f.name;
+  video.onloadedmetadata=()=>{
+    S.loaded=true;S.dur=video.duration;S.vw=video.videoWidth;S.vh=video.videoHeight;
+    $("fileMeta").innerHTML=`<b>${f.name}</b> — ${fmtF(S.dur,2)} s — ${S.vw}×${S.vh}. `+
+      `Le framerate n'est pas exposé de façon fiable par le navigateur : <b>vérifie-le manuellement</b> (réglage iPhone).`;
+    $("t1In").value=fmtF(S.dur,2);
+    $("runBtn").disabled=false;
+    sizeCanvas();seekTo(0).then(draw);
+    if(/\.mov$/i.test(f.name))
+      $("fileMeta").innerHTML+=`<div class="warn">.mov : selon le codec (HEVC), certains navigateurs ne le lisent pas — si l'image reste noire, réexporter en .mp4 H.264.</div>`;
+  };
+  video.onerror=()=>{$("fileMeta").innerHTML=`<span style="color:var(--red)">Impossible de lire ce fichier vidéo (codec non supporté ?). Essayer un export .mp4 H.264.</span>`;};
+};
+["fpsIn"].forEach(id=>$(id).onchange=()=>{S.fps=+$("fpsIn").value||30;saveParams();});
+document.querySelectorAll(".fpsQ").forEach(b=>b.onclick=()=>{$("fpsIn").value=b.dataset.v;S.fps=+b.dataset.v;saveParams();});
+
+$("demoBtn").onclick=()=>{
+  S.demo=true;S.fps=240;$("fpsIn").value=240;
+  const fs=240,T=5,n=fs*T,t=[],x=[],y=[],r=[],q=[];
+  for(let i=0;i<n;i++){
+    const ti=i/fs;t.push(ti);
+    const xi=3.0*Math.sin(2*Math.PI*20*ti)+0.6*Math.sin(2*Math.PI*47*ti)+0.15*(Math.random()-.5)+0.001*i;
+    const yi=1.2*Math.sin(2*Math.PI*20*ti+1.1)+0.15*(Math.random()-.5);
+    x.push(xi);y.push(yi);r.push(Math.hypot(xi,yi));q.push(0.95+0.04*Math.random());
+  }
+  S.res={t,x,y,r,q,fs,alerts:["Données synthétiques : sinus 20 Hz (A=3 px) + 47 Hz (A=0.6 px), bruit, dérive."],
+    method:"démo",lost:0,file:"démonstration synthétique"};
+  postProcessAndShow();
+};
+
+/* ═══════════════════ 3. LECTEUR & CANVAS ═══════════════════ */
+function sizeCanvas(){
+  const w=Math.min(836,document.body.clientWidth-24);
+  const ar=S.vh&&S.vw?S.vh/S.vw:9/16;
+  dispC.width=w*Math.min(devicePixelRatio||1,2);
+  dispC.height=dispC.width*ar;
+  dispC.style.height="auto";
+  $("ampC").width=dispC.width;$("ampC").height=dispC.height;
+}
+addEventListener("resize",()=>{if(S.loaded){sizeCanvas();draw();}});
+function v2c(){return dispC.width/(S.vw||dispC.width);}   // échelle vidéo→canvas
+
+function seekTo(t){
+  return new Promise(res=>{
+    const h=()=>{video.removeEventListener("seeked",h);clearTimeout(to);res();};
+    const to=setTimeout(()=>{video.removeEventListener("seeked",h);res();},900);
+    video.addEventListener("seeked",h);
+    video.currentTime=Math.max(0,Math.min(t,S.dur-1e-4));
+  });
+}
+function draw(){
+  if(!S.loaded)return;
+  const sc=v2c();
+  dctx.drawImage(video,0,0,dispC.width,dispC.height);
+  if(S.roi){
+    dctx.strokeStyle="#EF3346";dctx.lineWidth=2;
+    dctx.strokeRect(S.roi.x*sc,S.roi.y*sc,S.roi.w*sc,S.roi.h*sc);
+    dctx.fillStyle="#EF3346";
+    dctx.fillRect((S.roi.x+S.roi.w)*sc-8,(S.roi.y+S.roi.h)*sc-8,8,8);  // grip
+  }
+  if(S.cal){
+    dctx.strokeStyle="#4FD1E8";dctx.lineWidth=2;
+    dctx.beginPath();dctx.moveTo(S.cal.x1*sc,S.cal.y1*sc);dctx.lineTo(S.cal.x2*sc,S.cal.y2*sc);dctx.stroke();
+    for(const p of [[S.cal.x1,S.cal.y1],[S.cal.x2,S.cal.y2]]){
+      dctx.beginPath();dctx.arc(p[0]*sc,p[1]*sc,4,0,7);dctx.fillStyle="#4FD1E8";dctx.fill();
+    }
+  }
+  const fr=Math.round(video.currentTime*S.fps);
+  $("tcVal").textContent=`img ${fr} · ${fmtF(video.currentTime,3)} s`;
+  $("seekBar").value=S.dur?video.currentTime/S.dur*1000:0;
+}
+$("playBtn").onclick=togglePlay;
+function togglePlay(){
+  if(!S.loaded)return;
+  S.playing=!S.playing;
+  $("playBtn").textContent=S.playing?"⏸":"▶";
+  if(S.playing){video.play();const loop=()=>{if(!S.playing)return;draw();requestAnimationFrame(loop);};loop();}
+  else video.pause();
+}
+$("prevBtn").onclick=async()=>{S.playing=false;video.pause();$("playBtn").textContent="▶";await seekTo(video.currentTime-1/S.fps);draw();};
+$("nextBtn").onclick=async()=>{S.playing=false;video.pause();$("playBtn").textContent="▶";await seekTo(video.currentTime+1/S.fps);draw();};
+$("firstBtn").onclick=async()=>{S.playing=false;video.pause();$("playBtn").textContent="▶";await seekTo(+$("t0In").value||0);draw();};
+$("seekBar").oninput=async e=>{await seekTo(e.target.value/1000*S.dur);draw();};
+addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT")return;
+  if(e.code==="Space"){e.preventDefault();togglePlay();}
+  if(e.code==="ArrowRight")$("nextBtn").click();
+  if(e.code==="ArrowLeft")$("prevBtn").click();
+});
+
+/* ─── sélection ROI / calibration (pointer) ─── */
+$("modeRoiBtn").onclick=()=>{S.mode="roi";$("modeRoiBtn").classList.add("on");$("modeCalBtn").classList.remove("on");};
+$("modeCalBtn").onclick=()=>{S.mode="cal";$("modeCalBtn").classList.add("on");$("modeRoiBtn").classList.remove("on");};
+$("resetSelBtn").onclick=()=>{S.roi=null;S.cal=null;S.mmPerPx=0;updSelMeta();draw();};
+
+let ptr=null;
+dispC.addEventListener("pointerdown",e=>{
+  if(!S.loaded)return;
+  const r=dispC.getBoundingClientRect(),sc=v2c()*(dispC.width/r.width)/ (dispC.width/r.width); // px canvas
+  const cx=(e.clientX-r.left)*(dispC.width/r.width)/v2c();   // → px vidéo
+  const cy=(e.clientY-r.top)*(dispC.width/r.width)/v2c();
+  dispC.setPointerCapture(e.pointerId);
+  if(S.mode==="cal"){ptr={type:"cal",x:cx,y:cy};S.cal={x1:cx,y1:cy,x2:cx,y2:cy};}
+  else{
+    if(S.roi){
+      const gx=S.roi.x+S.roi.w,gy=S.roi.y+S.roi.h;
+      if(Math.abs(cx-gx)<14/v2c()*(dispC.width/dispC.width)&&Math.abs(cy-gy)<14){ptr={type:"resize"};return;}
+      if(cx>S.roi.x&&cx<gx&&cy>S.roi.y&&cy<gy){ptr={type:"move",dx:cx-S.roi.x,dy:cy-S.roi.y};return;}
+    }
+    ptr={type:"draw",x:cx,y:cy};S.roi={x:cx,y:cy,w:1,h:1};
+  }
+  e.preventDefault();
+});
+dispC.addEventListener("pointermove",e=>{
+  if(!ptr)return;
+  const r=dispC.getBoundingClientRect();
+  const cx=(e.clientX-r.left)*(dispC.width/r.width)/v2c();
+  const cy=(e.clientY-r.top)*(dispC.width/r.width)/v2c();
+  if(ptr.type==="cal"){S.cal.x2=cx;S.cal.y2=cy;}
+  else if(ptr.type==="draw"){S.roi.w=cx-ptr.x;S.roi.h=cy-ptr.y;
+    S.roi.x=Math.min(ptr.x,cx);S.roi.y=Math.min(ptr.y,cy);
+    S.roi.w=Math.abs(S.roi.w);S.roi.h=Math.abs(S.roi.h);}
+  else if(ptr.type==="move"){S.roi.x=cx-ptr.dx;S.roi.y=cy-ptr.dy;}
+  else if(ptr.type==="resize"){S.roi.w=Math.max(10,cx-S.roi.x);S.roi.h=Math.max(10,cy-S.roi.y);}
+  draw();
+});
+dispC.addEventListener("pointerup",e=>{
+  if(!ptr)return;
+  if(ptr.type==="draw"&&S.roi&&(S.roi.w<8||S.roi.h<8)){    // simple clic → ROI 32 px
+    S.roi={x:S.roi.x-16,y:S.roi.y-16,w:32,h:32};
+  }
+  if(ptr.type==="cal"){
+    const d=Math.hypot(S.cal.x2-S.cal.x1,S.cal.y2-S.cal.y1);
+    if(d>4){const mm=+$("calMm").value||0;S.mmPerPx=mm>0?mm/d:0;}
+  }
+  clampRoi();ptr=null;updSelMeta();draw();
+});
+$("calMm").onchange=()=>{
+  if(S.cal){const d=Math.hypot(S.cal.x2-S.cal.x1,S.cal.y2-S.cal.y1);
+    if(d>4)S.mmPerPx=(+$("calMm").value||0)/d;updSelMeta();}
+};
+function clampRoi(){
+  if(!S.roi||!S.vw)return;
+  S.roi.x=Math.max(0,Math.min(S.vw-10,S.roi.x));
+  S.roi.y=Math.max(0,Math.min(S.vh-10,S.roi.y));
+  S.roi.w=Math.max(10,Math.min(S.vw-S.roi.x,S.roi.w));
+  S.roi.h=Math.max(10,Math.min(S.vh-S.roi.y,S.roi.h));
+}
+function updSelMeta(){
+  $("roiVal").textContent=S.roi?`ROI : ${Math.round(S.roi.w)}×${Math.round(S.roi.h)} px @ (${Math.round(S.roi.x)}, ${Math.round(S.roi.y)})`:"ROI : non définie";
+  $("calVal").textContent=S.mmPerPx?`${fmtF(S.mmPerPx,4)} mm/px`:"non calibré";
+}
+
+/* ═══════════════════ 4. TRACKING ═══════════════════ */
+function grayFromRegion(rx,ry,rw,rh){
+  grabC.width=rw;grabC.height=rh;
+  gctx.drawImage(video,rx,ry,rw,rh,0,0,rw,rh);
+  const d=gctx.getImageData(0,0,rw,rh).data;
+  const g=new Float32Array(rw*rh);
+  for(let i=0,p=0;i<g.length;i++,p+=4)g[i]=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
+  return g;
+}
+function ncc(tpl,tw,th,tMean,tStd,img,iw,ox,oy){
+  let s=0,s2=0,sc=0;const n=tw*th;
+  for(let y=0;y<th;y++)for(let x=0;x<tw;x++){
+    const v=img[(oy+y)*iw+ox+x];s+=v;s2+=v*v;sc+=v*tpl[y*tw+x];
+  }
+  const m=s/n,sd=Math.sqrt(Math.max(1e-9,s2/n-m*m));
+  return (sc/n-m*tMean)/(sd*tStd+1e-9);
+}
+/* corrélation exhaustive + sub-pixel parabolique */
+function trackNCC(tpl,tw,th,tMean,tStd,img,iw,ih,cx,cy,R,subpx){
+  let best=-2,bx=0,by=0;
+  const scores={};
+  for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){
+    const ox=Math.round(cx-tw/2+dx),oy=Math.round(cy-th/2+dy);
+    if(ox<0||oy<0||ox+tw>=iw||oy+th>=ih)continue;
+    const c=ncc(tpl,tw,th,tMean,tStd,img,iw,ox,oy);
+    scores[dx+","+dy]=c;
+    if(c>best){best=c;bx=dx;by=dy;}
+  }
+  let sx=0,sy=0;
+  if(subpx){
+    const g=(dx,dy)=>scores[dx+","+dy]??best;
+    const cxm=g(bx-1,by),cxp=g(bx+1,by),cym=g(bx,by-1),cyp=g(bx,by+1);
+    const dxs=(cxm-cxp)/(2*(cxm-2*best+cxp)||1);
+    const dys=(cym-cyp)/(2*(cym-2*best+cyp)||1);
+    if(Math.abs(dxs)<1)sx=dxs;if(Math.abs(dys)<1)sy=dys;
+  }
+  return {x:cx+bx+sx,y:cy+by+sy,q:best};
+}
+/* Lucas-Kanade itératif (référence = 1re image), échantillonnage bilinéaire */
+function bilin(img,iw,ih,x,y){
+  const x0=Math.floor(x),y0=Math.floor(y);
+  if(x0<0||y0<0||x0>=iw-1||y0>=ih-1)return null;
+  const fx=x-x0,fy=y-y0,i=y0*iw+x0;
+  return img[i]*(1-fx)*(1-fy)+img[i+1]*fx*(1-fy)+img[i+iw]*(1-fx)*fy+img[i+iw+1]*fx*fy;
+}
+function makeLKRef(tpl,tw,th){
+  const Ix=new Float32Array(tw*th),Iy=new Float32Array(tw*th);
+  let gxx=0,gxy=0,gyy=0;
+  for(let y=1;y<th-1;y++)for(let x=1;x<tw-1;x++){
+    const i=y*tw+x;
+    Ix[i]=(tpl[i+1]-tpl[i-1])/2;Iy[i]=(tpl[i+tw]-tpl[i-tw])/2;
+    gxx+=Ix[i]*Ix[i];gxy+=Ix[i]*Iy[i];gyy+=Iy[i]*Iy[i];
+  }
+  return {Ix,Iy,gxx,gxy,gyy,det:gxx*gyy-gxy*gxy};
+}
+function trackLK(tpl,tw,th,ref,img,iw,ih,cx,cy){
+  let px=cx,py=cy;
+  if(Math.abs(ref.det)<1e-3)return {x:cx,y:cy,q:0,fail:true};
+  for(let it=0;it<25;it++){
+    let bx=0,by=0,ok=true;
+    for(let y=1;y<th-1;y++)for(let x=1;x<tw-1;x++){
+      const v=bilin(img,iw,ih,px-tw/2+x,py-th/2+y);
+      if(v===null){ok=false;break;}
+      const e=tpl[y*tw+x]-v,i=y*tw+x;
+      bx+=ref.Ix[i]*e;by+=ref.Iy[i]*e;
+    }
+    if(!ok)return {x:px,y:py,q:0,fail:true};
+    const dx=(ref.gyy*bx-ref.gxy*by)/ref.det;
+    const dy=(ref.gxx*by-ref.gxy*bx)/ref.det;
+    px+=dx;py+=dy;
+    if(Math.hypot(dx,dy)<0.01)break;
+  }
+  /* qualité = NCC au point convergé */
+  let s=0,s2=0,sc=0,n=0,tS=0,tS2=0;
+  for(let y=1;y<th-1;y++)for(let x=1;x<tw-1;x++){
+    const v=bilin(img,iw,ih,px-tw/2+x,py-th/2+y);if(v===null)continue;
+    const tv=tpl[y*tw+x];s+=v;s2+=v*v;tS+=tv;tS2+=tv*tv;sc+=v*tv;n++;
+  }
+  if(!n)return {x:px,y:py,q:0,fail:true};
+  const m=s/n,tM=tS/n;
+  const sd=Math.sqrt(Math.max(1e-9,s2/n-m*m)),tSd=Math.sqrt(Math.max(1e-9,tS2/n-tM*tM));
+  return {x:px,y:py,q:(sc/n-m*tM)/(sd*tSd+1e-9)};
+}
+
+/* ═══════════════════ 5. BOUCLE D'ANALYSE ═══════════════════ */
+$("stopBtn").onclick=()=>S.stop=true;
+$("runBtn").onclick=async()=>{
+  if(S.demo||!S.loaded){alert("Charger une vidéo d'abord (ou utiliser la démonstration).");return;}
+  if(!S.roi){alert("Définir une ROI sur la zone à suivre (mode sélection ROI).");return;}
+  saveParams();
+  S.playing=false;video.pause();$("playBtn").textContent="▶";
+  S.running=true;S.stop=false;
+  $("runBtn").disabled=true;$("stopBtn").disabled=false;
+  $("progWrap").style.display="block";$("alertBox").textContent="";
+
+  const fps=S.fps=+$("fpsIn").value||30;
+  const t0=+$("t0In").value||0;
+  let t1=+$("t1In").value||S.dur; if(t1<=t0)t1=S.dur;
+  t1=Math.min(t1,S.dur);
+  const nFrames=Math.floor((t1-t0)*fps);
+  const method=$("methodSel").value, R=Math.round(+$("searchIn").value||16);
+  const qMin=+$("corrIn").value||0.5, subpx=$("subpxChk").checked;
+  const alerts=[];
+  if(nFrames<16){alert("Portion trop courte.");endRun();return;}
+  if(nFrames/ (t1-t0) > 245) alerts.push("Framerate saisi > 240 fps : vérifier la cohérence.");
+  if(S.dur>0 && fps*S.dur<30) alerts.push("Framerate saisi peut-être incohérent avec la durée de la vidéo — à vérifier.");
+
+  /* modèle de référence sur la 1re image */
+  await seekTo(t0);
+  clampRoi();
+  const tw=Math.round(Math.min(64,S.roi.w)),th=Math.round(Math.min(64,S.roi.h));
+  const rx0=Math.round(S.roi.x+(S.roi.w-tw)/2),ry0=Math.round(S.roi.y+(S.roi.h-th)/2);
+  const margin=R+8;
+  let cx=rx0+tw/2, cy=ry0+th/2;               // centre suivi (px vidéo)
+  const x0=cx,y0=cy;
+  const region=()=>{                          // zone à extraire autour du centre courant
+    const rx=Math.round(Math.max(0,cx-tw/2-margin)),ry=Math.round(Math.max(0,cy-th/2-margin));
+    const rw=Math.min(S.vw-rx,tw+2*margin),rh=Math.min(S.vh-ry,th+2*margin);
+    return{rx,ry,rw,rh};
+  };
+  let reg=region();
+  let img=grayFromRegion(reg.rx,reg.ry,reg.rw,reg.rh);
+  const tpl=new Float32Array(tw*th);
+  for(let y=0;y<th;y++)for(let x=0;x<tw;x++)
+    tpl[y*tw+x]=img[(ry0-reg.ry+y)*reg.rw+(rx0-reg.rx+x)];
+  let tM=0,tS2=0;for(const v of tpl){tM+=v;tS2+=v*v;}
+  tM/=tpl.length;const tSd=Math.sqrt(Math.max(1e-9,tS2/tpl.length-tM*tM));
+  if(tSd<3)alerts.push("ROI peu contrastée (σ="+fmtF(tSd,1)+") : suivi potentiellement instable — choisir une zone plus texturée.");
+  const lkRef=method==="lk"?makeLKRef(tpl,tw,th):null;
+
+  const t=[],xs=[],ys=[],rs=[],qs=[];let lost=0;
+  const startT=performance.now();
+  for(let k=0;k<nFrames;k++){
+    if(S.stop){alerts.push("Analyse interrompue à l'image "+k+".");break;}
+    await seekTo(t0+k/fps);
+    reg=region();
+    if(reg.rw<tw+4||reg.rh<th+4){alerts.push("La zone suivie est sortie de l'image (img "+k+").");break;}
+    img=grayFromRegion(reg.rx,reg.ry,reg.rw,reg.rh);
+    const lx=cx-reg.rx, ly=cy-reg.ry;
+    let res;
+    if(method==="ncc")res=trackNCC(tpl,tw,th,tM,tSd,img,reg.rw,reg.rh,lx,ly,R,subpx);
+    else res=trackLK(tpl,tw,th,lkRef,img,reg.rw,reg.rh,lx,ly);
+    const gx=res.x+reg.rx, gy=res.y+reg.ry;
+    t.push(k/fps);
+    if(res.fail||res.q<qMin){
+      xs.push(NaN);ys.push(NaN);rs.push(NaN);qs.push(res.q||0);lost++;
+    }else{
+      cx=gx;cy=gy;
+      const dx=gx-x0,dy=gy-y0;
+      xs.push(dx);ys.push(dy);rs.push(Math.hypot(dx,dy));qs.push(res.q);
+    }
+    if(k%5===0){
+      const pct=(k+1)/nFrames*100;
+      $("progFill").style.width=pct+"%";
+      const el=(performance.now()-startT)/1000;
+      $("progTxt").textContent=`image ${k+1}/${nFrames} — ${fmtF(pct,0)} % — ${fmtF(el,0)} s écoulées, ~${fmtF(el/(k+1)*(nFrames-k-1),0)} s restantes`;
+      await new Promise(r=>setTimeout(r,0));   // laisser respirer l'UI
+    }
+  }
+  if(lost>0)alerts.push(lost+" image(s) perdue(s) (corrélation < "+qMin+").");
+  if(lost>0.2*t.length)alerts.push("⚠ Plus de 20 % d'images manquantes : résultat peu fiable.");
+  S.res={t,x:xs,y:ys,r:rs,q:qs,fs:fps,alerts,method:method==="lk"?"Lucas-Kanade":"Corrélation NCC",
+         lost,file:S.fileName,tpl:{tw,th},x0,y0};
+  endRun();
+  postProcessAndShow();
+};
+function endRun(){
+  S.running=false;$("runBtn").disabled=false;$("stopBtn").disabled=true;
+  $("progFill").style.width="100%";
+}
+
+/* ═══════════════════ 6. POST-TRAITEMENT & AFFICHAGE ═══════════════════ */
+function interpGaps(sig,maxGap){
+  const out=sig.slice();
+  let i=0;
+  while(i<out.length){
+    if(!isFinite(out[i])){
+      let j=i;while(j<out.length&&!isFinite(out[j]))j++;
+      if(i>0&&j<out.length&&j-i<=maxGap){
+        for(let k=i;k<j;k++)out[k]=out[i-1]+(out[j]-out[i-1])*(k-i+1)/(j-i+1);
+      }
+      i=j;
+    }else i++;
+  }
+  return out;
+}
+function unitFactor(){
+  const u=$("unitSel").value;
+  if(u==="mm"&&S.mmPerPx)return{f:S.mmPerPx,lbl:"mm"};
+  if(u==="um"&&S.mmPerPx)return{f:S.mmPerPx*1000,lbl:"µm"};
+  return{f:1,lbl:"px"};
+}
+function processedSignals(){
+  const R=S.res;if(!R)return null;
+  const maxGap=5,doI=$("interpChk").checked;
+  let x=doI?interpGaps(R.x,maxGap):R.x.slice();
+  let y=doI?interpGaps(R.y,maxGap):R.y.slice();
+  /* remplacer NaN restants par 0 pour le traitement spectral */
+  const clean=a=>a.map(v=>isFinite(v)?v:0);
+  x=clean(x);y=clean(y);
+  const sm=+$("smoothIn").value||0;
+  if(sm>1){x=movAvg(x,sm);y=movAvg(y,sm);}
+  if($("demeanChk").checked||$("detrendChk").checked){
+    const lin=$("detrendChk").checked;
+    x=detrend(x,lin);y=detrend(y,lin);
+  }
+  const hp=+$("hpIn").value||0,lp=+$("lpIn").value||0;
+  if(hp>0){x=biquad(x,hp,R.fs,"hp");y=biquad(y,hp,R.fs,"hp");}
+  if(lp>0){x=biquad(x,lp,R.fs,"lp");y=biquad(y,lp,R.fs,"lp");}
+  const r=x.map((v,i)=>Math.hypot(v,y[i]));
+  const uf=unitFactor();
+  return {t:R.t,x:x.map(v=>v*uf.f),y:y.map(v=>v*uf.f),r:r.map(v=>v*uf.f),q:R.q,unit:uf.lbl,fs:R.fs};
+}
+function postProcessAndShow(){
+  const P=processedSignals();if(!P)return;
+  const axis=$("axisSel").value,sig=P[axis];
+  /* stats */
+  const st=stats(sig),qm=stats(P.q.filter(isFinite));
+  $("statsBox").innerHTML=[
+    ["Crête à crête",fmtF(st.pp,3),P.unit],["RMS",fmtF(st.rms,3),P.unit],
+    ["Max |x|",fmtF(st.max,3),P.unit],["Moyenne",fmtF(st.mean,3),P.unit],
+    ["Écart-type",fmtF(st.std,3),P.unit],["Qualité moy.",fmtF(qm.mean,2),""],
+  ].map(([l,v,u])=>`<div class="st"><div class="lbl">${l}</div><div class="val mono">${v}<small> ${u}</small></div></div>`).join("");
+
+  /* tracé temporel */
+  const dark=!document.body.classList.contains("light");
+  const lay={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:getComputedStyle(document.body).getPropertyValue("--plotbg"),
+    font:{color:dark?"#8FA3C8":"#5A6E92",size:10},margin:{l:45,r:10,t:10,b:35},
+    xaxis:{title:"t (s)",gridcolor:"rgba(143,163,200,.15)"},
+    yaxis:{title:P.unit,gridcolor:"rgba(143,163,200,.15)"},
+    legend:{orientation:"h",y:1.12},dragmode:"zoom",hovermode:"x unified"};
+  Plotly.newPlot("timePlot",[
+    {x:P.t,y:P.x,name:"X",line:{color:"#4FD1E8",width:1}},
+    {x:P.t,y:P.y,name:"Y",line:{color:"#43D9A3",width:1}},
+    {x:P.t,y:P.r,name:"R",line:{color:"#FFB454",width:1},visible:"legendonly"},
+    {x:P.t,y:P.q,name:"qualité",yaxis:"y2",line:{color:"#EF3346",width:1,dash:"dot"},visible:"legendonly"},
+  ],Object.assign({},lay,{yaxis2:{overlaying:"y",side:"right",range:[0,1.05],showgrid:false,title:"corr."}}),
+    {responsive:true,displaylogo:false});
+
+  updateSpectrum();
+  buildAmpViz();
+  buildReport(st,qm);
+  $("alertBox").textContent=(S.res.alerts||[]).join("\n");
+  for(const id of["secTime","secSpec","secAmp","secExp"])$(id).open=true;
+}
+
+/* ─── spectre ─── */
+function updateSpectrum(){
+  const P=processedSignals();if(!P)return;
+  const axis=$("axisSel").value;
+  const sp=ampSpectrum(P[axis],P.fs,$("winSel").value);
+  const qty=$("qtySel").value,vmin=+$("vminIn").value||0;
+  let a=Array.from(sp.a),ylbl=P.unit;
+  if(qty==="v"){
+    a=a.map((v,k)=>sp.f[k]<vmin?0:2*Math.PI*sp.f[k]*v);
+    ylbl=P.unit==="mm"?"mm/s":P.unit==="µm"?"µm/s":"px/s";
+  }else if(qty==="a"){
+    const g=$("accUnitSel").value==="g";
+    a=a.map((v,k)=>{
+      if(sp.f[k]<vmin)return 0;
+      let acc=(2*Math.PI*sp.f[k])**2*v;                 // unité/s²
+      if(P.unit==="mm")acc/=1000;                        // → m/s²
+      else if(P.unit==="µm")acc/=1e6;
+      return g&&(P.unit==="mm"||P.unit==="µm")?acc/9.81:acc;
+    });
+    ylbl=(P.unit==="mm"||P.unit==="µm")?($("accUnitSel").value==="g"?"g":"m/s²"):"px/s²";
+  }
+  S.spec={f:Array.from(sp.f),a,df:sp.df,N:sp.N,fs:P.fs,unit:ylbl,axis,qty};
+  const peaks=findPeaks(S.spec.f,Float64Array.from(a));
+  S.spec.peaks=peaks;
+  const fmax=+$("fmaxIn").value||P.fs/2;
+
+  $("specMeta").innerHTML=`Δf = <b>${fmtF(sp.df,3)} Hz</b> · Nyquist = <b>${fmtF(P.fs/2,1)} Hz</b> · durée analysée = <b>${fmtF(sp.N/P.fs,2)} s</b> · N = <b>${sp.N}</b> échant. (FFT ${sp.Nfft})`
+    +(peaks[0]?` · dominante : <b style="color:var(--amber)">${fmtF(peaks[0].f,2)} Hz</b> (${fmtF(peaks[0].a,4)} ${ylbl})`:"");
+
+  const dark=!document.body.classList.contains("light");
+  const traces=[{x:S.spec.f,y:a,name:"spectre",line:{color:"#4FD1E8",width:1.2},fill:"tozeroy",fillcolor:"rgba(79,209,232,.12)"}];
+  if(S.refSpec)traces.push({x:S.refSpec.f,y:S.refSpec.a,name:"référence",line:{color:"#8FA3C8",width:1,dash:"dash"}});
+  if(peaks.length)traces.push({x:peaks.map(p=>p.f),y:peaks.map(p=>p.a),mode:"markers+text",name:"pics",
+    text:peaks.map(p=>fmtF(p.f,1)+" Hz"),textposition:"top center",textfont:{size:9},
+    marker:{color:"#FFB454",size:7,symbol:"diamond"}});
+  Plotly.newPlot("specPlot",traces,{
+    paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:getComputedStyle(document.body).getPropertyValue("--plotbg"),
+    font:{color:dark?"#8FA3C8":"#5A6E92",size:10},margin:{l:50,r:10,t:10,b:35},
+    xaxis:{title:"f (Hz)",range:[0,Math.min(fmax,P.fs/2)],gridcolor:"rgba(143,163,200,.15)"},
+    yaxis:{title:ylbl,type:$("scaleSel").value==="log"?"log":"linear",gridcolor:"rgba(143,163,200,.15)"},
+    legend:{orientation:"h",y:1.12},hovermode:"x"},
+    {responsive:true,displaylogo:false});
+
+  $("peaksBody").innerHTML=peaks.map((p,i)=>
+    `<tr><td>${i+1}</td><td class="mono">${fmtF(p.f,2)} Hz</td><td class="mono">${fmtF(p.a,4)} ${ylbl}</td></tr>`).join("")
+    ||`<tr><td colspan="3">Aucun pic significatif.</td></tr>`;
+  updateComparison();
+}
+for(const id of["qtySel","scaleSel","fmaxIn","accUnitSel","winSel","axisSel","unitSel",
+                "hpIn","lpIn","smoothIn","demeanChk","detrendChk","interpChk","vminIn"])
+  $(id).addEventListener("change",()=>{if(S.res){saveParams();postProcessAndShow();}});
+
+/* ─── visualisation amplifiée ─── */
+let refFrameBmp=null;
+async function buildAmpViz(){
+  const c=$("ampC"),ctx=c.getContext("2d");
+  if(!S.demo&&S.loaded){
+    await seekTo(+$("t0In").value||0);
+    refFrameBmp=document.createElement("canvas");
+    refFrameBmp.width=c.width;refFrameBmp.height=c.height;
+    refFrameBmp.getContext("2d").drawImage(video,0,0,c.width,c.height);
+  }else refFrameBmp=null;
+  drawAmpFrame(0);
+}
+function drawAmpFrame(idx){
+  const c=$("ampC"),ctx=c.getContext("2d");
+  const P=processedSignals();if(!P)return;
+  const amp=+$("ampIn").value;
+  ctx.fillStyle="#021740";ctx.fillRect(0,0,c.width,c.height);
+  if(refFrameBmp)ctx.drawImage(refFrameBmp,0,0);
+  const uf=unitFactor().f;                    // signaux → repx px
+  const sc=v2c();
+  const bx=(S.res.x0||S.vw/2)*sc,by=(S.res.y0||S.vh/2)*sc;
+  const px=i=>bx+(P.x[i]/uf)*sc,py=i=>by+(P.y[i]/uf)*sc;
+  const ax=i=>bx+(P.x[i]/uf)*sc*amp,ay=i=>by+(P.y[i]/uf)*sc*amp;
+  const N=P.t.length,upto=Math.max(2,Math.min(N,idx));
+  /* trajectoire réelle (cyan) et amplifiée (rouge) */
+  ctx.strokeStyle="rgba(79,209,232,.9)";ctx.lineWidth=1;
+  ctx.beginPath();for(let i=0;i<upto;i++){i?ctx.lineTo(px(i),py(i)):ctx.moveTo(px(i),py(i));}ctx.stroke();
+  ctx.strokeStyle="rgba(239,51,70,.85)";ctx.lineWidth=1.2;
+  ctx.beginPath();for(let i=0;i<upto;i++){i?ctx.lineTo(ax(i),ay(i)):ctx.moveTo(ax(i),ay(i));}ctx.stroke();
+  /* point courant + vecteur amplifié */
+  const i=upto-1;
+  ctx.beginPath();ctx.arc(px(i),py(i),4,0,7);ctx.fillStyle="#4FD1E8";ctx.fill();
+  ctx.strokeStyle="#EF3346";ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(ax(i),ay(i));ctx.stroke();
+  ctx.beginPath();ctx.arc(ax(i),ay(i),5,0,7);ctx.fillStyle="#EF3346";ctx.fill();
+  ctx.fillStyle="#EAF0FA";ctx.font="11px Arial";
+  ctx.fillText("×"+amp+"  ·  t = "+fmtF(P.t[i],3)+" s",10,18);
+}
+$("ampIn").oninput=()=>{$("ampVal").textContent=$("ampIn").value;if(S.res)drawAmpFrame(2e9);};
+$("ampPlayBtn").onclick=()=>{
+  if(!S.res)return;
+  if(S.ampAnim){cancelAnimationFrame(S.ampAnim);S.ampAnim=null;$("ampPlayBtn").textContent="▶ Rejouer";return;}
+  const P=processedSignals(),speed=+$("ampSpeed").value,t0=performance.now();
+  $("ampPlayBtn").textContent="⏸ Stop";
+  const loop=now=>{
+    const tv=(now-t0)/1000*speed;
+    const idx=Math.floor(tv*P.fs);
+    if(idx>=P.t.length){drawAmpFrame(2e9);$("ampPlayBtn").textContent="▶ Rejouer";S.ampAnim=null;return;}
+    drawAmpFrame(idx+1);
+    S.ampAnim=requestAnimationFrame(loop);
+  };
+  S.ampAnim=requestAnimationFrame(loop);
+};
+
+/* ─── comparaison référence ─── */
+$("cmpBtn").onclick=()=>$("cmpIn").click();
+$("cmpIn").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const lines=rd.result.split(/\r?\n/).filter(l=>l.trim());
+    const F=[],A=[];
+    for(const l of lines){
+      const p=l.split(/[;,\t]/).map(v=>parseFloat(v.replace(",",".")));
+      if(p.length>=2&&isFinite(p[0])&&isFinite(p[1])){F.push(p[0]);A.push(p[1]);}
+    }
+    if(F.length<8){$("cmpMeta").textContent="CSV illisible (attendu : f_Hz;amplitude).";return;}
+    S.refSpec={f:F,a:A};
+    $("cmpMeta").textContent=`Référence chargée : ${f.name} (${F.length} points).`;
+    if(S.spec)updateSpectrum();
+  };
+  rd.readAsText(f);
+};
+function updateComparison(){
+  const v=$("verdictBox");
+  if(!S.refSpec||!S.spec||!S.spec.peaks.length){v.className="verdict";$("cmpDetail").textContent="";return;}
+  const rp=findPeaks(Float64Array.from(S.refSpec.f),Float64Array.from(S.refSpec.a));
+  if(!rp.length){v.className="verdict";return;}
+  const cf=S.spec.peaks[0],rf=rp[0];
+  const dA=rf.a?Math.abs(cf.a-rf.a)/rf.a*100:0;
+  const dF=rf.f?Math.abs(cf.f-rf.f)/rf.f*100:0;
+  let cls="stable",lbl="STABLE";
+  if(dA>30||dF>10){cls="high";lbl="ÉVOLUTION IMPORTANTE";}
+  else if(dA>10||dF>3){cls="moderate";lbl="ÉVOLUTION MODÉRÉE";}
+  v.className="verdict "+cls;v.textContent=lbl;
+  $("cmpDetail").innerHTML=`Dominante : <b>${fmtF(cf.f,2)} Hz</b> vs réf. ${fmtF(rf.f,2)} Hz (Δf = ${fmtF(dF,1)} %) · `+
+    `amplitude : <b>${fmtF(cf.a,4)}</b> vs ${fmtF(rf.a,4)} (ΔA = ${fmtF(dA,1)} %)`;
+}
+
+/* ─── exports & rapport ─── */
+function dl(name,content,type){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+$("expTimeBtn").onclick=()=>{
+  const P=processedSignals();if(!P)return alert("Aucune analyse.");
+  let c="t_s;x_"+P.unit+";y_"+P.unit+";r_"+P.unit+";qualite\n";
+  for(let i=0;i<P.t.length;i++)
+    c+=`${P.t[i].toFixed(5)};${P.x[i].toFixed(5)};${P.y[i].toFixed(5)};${P.r[i].toFixed(5)};${(P.q[i]||0).toFixed(3)}\n`;
+  dl("vibro_temporel.csv",c,"text/csv");
+};
+$("expSpecBtn").onclick=()=>{
+  if(!S.spec)return alert("Aucune analyse.");
+  let c="f_Hz;amplitude_"+S.spec.unit+"\n";
+  for(let i=0;i<S.spec.f.length;i++)c+=`${S.spec.f[i].toFixed(4)};${S.spec.a[i].toExponential(5)}\n`;
+  dl("vibro_spectre.csv",c,"text/csv");
+};
+$("expJsonBtn").onclick=()=>{
+  if(!S.spec)return alert("Aucune analyse.");
+  dl("vibro_synthese.json",JSON.stringify(buildSummary(),null,2),"application/json");
+};
+$("expPngBtn").onclick=()=>{if(S.spec)Plotly.downloadImage("specPlot",{format:"png",filename:"vibro_spectre",scale:2});};
+$("expRepBtn").onclick=()=>{
+  if(!S.spec)return alert("Aucune analyse.");
+  const s=buildSummary();
+  const rows=Object.entries(s).map(([k,v])=>`<tr><td>${k}</td><td>${Array.isArray(v)?v.join("<br>"):v}</td></tr>`).join("");
+  const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapport Vibro-Vidéo</title>
+<style>body{font-family:Arial;color:#0B1E3C;max-width:720px;margin:30px auto;padding:0 16px}
+h1{font-size:18px;border-bottom:3px solid #EF3346;padding-bottom:6px;color:#001E50}
+table{width:100%;border-collapse:collapse;font-size:13px}td{padding:6px 8px;border-bottom:1px solid #ddd}
+td:first-child{font-weight:bold;width:40%;color:#001E50}.f{font-size:10px;color:#888;margin-top:24px}</style></head>
+<body><h1>Rapport d'analyse vibratoire — Vibro-Vidéo (CETIM)</h1><table>${rows}</table>
+<p class="f">Mesure par suivi vidéo — indicatif, non certifié. Imprimer : Ctrl/Cmd+P.</p>
+<script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
+  const w=open("","_blank");
+  if(w){w.document.write(html);w.document.close();}
+  else dl("vibro_rapport.html",html,"text/html");
+};
+function buildSummary(){
+  const P=processedSignals(),st=stats(P[$("axisSel").value]),qm=stats(P.q.filter(isFinite));
+  const pk=S.spec.peaks[0]||{f:0,a:0};
+  return {
+    "Fichier analysé":S.res.file,"Date d'analyse":new Date().toLocaleString("fr-FR"),
+    "Framerate":S.res.fs+" fps","Durée analysée":fmtF(P.t.length/S.res.fs,2)+" s",
+    "Méthode de suivi":S.res.method,
+    "Calibration":S.mmPerPx?fmtF(S.mmPerPx,4)+" mm/px":"non calibré (pixels)",
+    "Axe":$("axisSel").value.toUpperCase(),"Grandeur spectrale":{d:"déplacement",v:"vitesse",a:"accélération"}[S.spec.qty],
+    "Fréquence dominante":fmtF(pk.f,2)+" Hz","Amplitude dominante":fmtF(pk.a,4)+" "+S.spec.unit,
+    "Déplacement RMS":fmtF(st.rms,4)+" "+P.unit,"Crête à crête":fmtF(st.pp,4)+" "+P.unit,
+    "Qualité moyenne du suivi":fmtF(qm.mean,2),
+    "Images perdues":S.res.lost||0,
+    "Alertes":(S.res.alerts&&S.res.alerts.length)?S.res.alerts:["aucune"],
+  };
+}
+function buildReport(){
+  if(!S.spec)return;
+  const s=buildSummary();
+  $("reportBox").innerHTML=Object.entries(s).map(([k,v])=>
+    `<b>${k} :</b> ${Array.isArray(v)?v.join(" · "):v}`).join("<br>");
+}
+
+/* ─── thème, localStorage ─── */
+$("themeBtn").onclick=()=>{
+  document.body.classList.toggle("light");
+  localStorage.setItem("vv_theme",document.body.classList.contains("light")?"light":"dark");
+  if(S.res)postProcessAndShow();
+};
+const PARAM_IDS=["fpsIn","t0In","t1In","methodSel","searchIn","corrIn","smoothIn","hpIn","lpIn",
+  "winSel","axisSel","vminIn","unitSel","qtySel","scaleSel","fmaxIn","accUnitSel","calMm"];
+function saveParams(){
+  const o={};for(const id of PARAM_IDS)o[id]=$(id).value;
+  for(const id of["demeanChk","detrendChk","subpxChk","interpChk"])o[id]=$(id).checked;
+  localStorage.setItem("vv_params",JSON.stringify(o));
+}
+(function restore(){
+  if(localStorage.getItem("vv_theme")==="light")document.body.classList.add("light");
+  try{
+    const o=JSON.parse(localStorage.getItem("vv_params")||"{}");
+    for(const id of PARAM_IDS)if(o[id]!=null)$(id).value=o[id];
+    for(const id of["demeanChk","detrendChk","subpxChk","interpChk"])if(o[id]!=null)$(id).checked=o[id];
+    S.fps=+$("fpsIn").value||240;
+  }catch(e){}
+})();
+sizeCanvas();
+dctx.fillStyle="#021740";dctx.fillRect(0,0,dispC.width,dispC.height);
+dctx.fillStyle="#8FA3C8";dctx.font="13px Arial";
+dctx.fillText("Importer une vidéo ou charger la démonstration.",14,26);
+</script>
+</body>
+</html>

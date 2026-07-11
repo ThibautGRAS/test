@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SLAM Streaming — Principe LingBot-Map</title>
+<style>
+  :root{
+    --navy:#001E50;
+    --navy-2:#04275f;
+    --navy-3:#0a3170;
+    --red:#EF3346;
+    --cyan:#4FD1E8;
+    --amber:#FFB454;
+    --green:#43D9A3;
+    --ink:#EAF0FA;
+    --muted:#8FA3C8;
+    --line:rgba(143,163,200,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--navy);color:var(--ink);
+    font-family:"Arial Nova",Arial,Helvetica,sans-serif;
+    overscroll-behavior:none}
+  body{padding:max(10px,env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom));
+    max-width:560px;margin:0 auto}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:2px solid var(--red);padding-bottom:8px;margin-bottom:10px}
+  h1{font-size:15px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  h1 span{color:var(--red)}
+  .brand{font-size:10px;color:var(--muted);letter-spacing:1.5px}
+
+  /* ---------- readout strip ---------- */
+  .readouts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+  .ro{background:var(--navy-2);border:1px solid var(--line);border-radius:6px;
+    padding:6px 8px;min-width:0}
+  .ro .lbl{font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+  .ro .val{font-size:16px;font-weight:700;margin-top:2px}
+  .ro .val small{font-size:10px;font-weight:400;color:var(--muted)}
+  #ateVal.bad{color:var(--red)} #ateVal.ok{color:var(--green)}
+
+  /* ---------- panels ---------- */
+  .panel{background:var(--navy-2);border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;margin-bottom:10px}
+  .panel-h{display:flex;justify-content:space-between;align-items:center;
+    padding:6px 10px;border-bottom:1px solid var(--line)}
+  .panel-h .t{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .panel-h .s{font-size:10px;color:var(--muted)}
+  canvas{display:block;width:100%}
+  #mapC{aspect-ratio:1/1;touch-action:none}
+  #camC{height:74px}
+  #memC{height:64px}
+
+  .flash{position:absolute;inset:auto 10px 10px 10px;pointer-events:none;
+    background:rgba(239,51,70,.92);color:#fff;font-size:11px;font-weight:700;
+    padding:6px 10px;border-radius:6px;opacity:0;transition:opacity .3s;text-align:center}
+  .flash.show{opacity:1}
+  .map-wrap{position:relative}
+
+  /* ---------- legend ---------- */
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 10px;font-size:10px;color:var(--muted)}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
+  button{font-family:inherit;font-size:13px;font-weight:700;border:none;border-radius:8px;
+    color:#fff;cursor:pointer;padding:10px 0}
+  #playBtn{flex:1.2;background:var(--red)}
+  #playBtn.paused{background:var(--green);color:var(--navy)}
+  #resetBtn{flex:.8;background:var(--navy-3);border:1px solid var(--line)}
+  #speedBtn{flex:.8;background:var(--navy-3);border:1px solid var(--line)}
+  button:active{transform:scale(.97)}
+
+  .toggle{display:flex;justify-content:space-between;align-items:center;
+    background:var(--navy-2);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;margin-bottom:10px}
+  .toggle .tt{font-size:12px;font-weight:700}
+  .toggle .td{font-size:10px;color:var(--muted);margin-top:2px}
+  .switch{position:relative;width:46px;height:26px;flex:none;margin-left:10px}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:var(--navy-3);border:1px solid var(--line);
+    border-radius:13px;transition:.2s}
+  .slider:before{content:"";position:absolute;width:20px;height:20px;left:2px;top:2px;
+    background:var(--muted);border-radius:50%;transition:.2s}
+  .switch input:checked + .slider{background:var(--green);border-color:var(--green)}
+  .switch input:checked + .slider:before{transform:translateX(20px);background:var(--navy)}
+
+  .note{font-size:11px;line-height:1.5;color:var(--muted);padding:0 2px}
+  .note b{color:var(--ink)}
+  @media (prefers-reduced-motion: reduce){ .flash{transition:none} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SLAM <span>streaming</span></h1>
+  <div class="brand">CETIM · démo LingBot-Map</div>
+</header>
+
+<div class="readouts">
+  <div class="ro"><div class="lbl">Frame</div><div class="val mono" id="frameVal">0</div></div>
+  <div class="ro"><div class="lbl">Cadence</div><div class="val mono" id="fpsVal">0<small> fps</small></div></div>
+  <div class="ro"><div class="lbl">Points 3D</div><div class="val mono" id="ptsVal">0</div></div>
+  <div class="ro"><div class="lbl">Dérive ATE</div><div class="val mono" id="ateVal">0<small> cm</small></div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-h"><span class="t">Vue caméra (flux RGB simulé)</span><span class="s mono" id="poseVal">—</span></div>
+  <canvas id="camC"></canvas>
+</div>
+
+<div class="panel map-wrap">
+  <div class="panel-h"><span class="t">Carte reconstruite — vue de dessus</span><span class="s">reconstruction image par image</span></div>
+  <canvas id="mapC"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--cyan)"></i>points reconstruits</span>
+    <span><i style="background:var(--green)"></i>trajectoire estimée</span>
+    <span><i style="background:var(--muted)"></i>vérité terrain</span>
+    <span><i style="background:var(--red)"></i>caméra</span>
+  </div>
+  <div class="flash" id="flash">CORRECTION DE DÉRIVE — fermeture de boucle</div>
+</div>
+
+<div class="panel">
+  <div class="panel-h"><span class="t">Mémoire géométrique (principe GCA)</span><span class="s mono" id="memVal">—</span></div>
+  <canvas id="memC"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--red)"></i>contexte d'ancrage</span>
+    <span><i style="background:var(--cyan)"></i>fenêtre locale</span>
+    <span><i style="background:var(--amber)"></i>mémoire de trajectoire (compressée)</span>
+  </div>
+</div>
+
+<div class="toggle">
+  <div>
+    <div class="tt">Mémoire de trajectoire + ancrage</div>
+    <div class="td">Désactiver pour voir la dérive d'une odométrie pure</div>
+  </div>
+  <label class="switch">
+    <input type="checkbox" id="gcaToggle" checked>
+    <span class="slider"></span>
+  </label>
+</div>
+
+<div class="controls">
+  <button id="playBtn">⏸ Pause</button>
+  <button id="speedBtn" class="mono">×1</button>
+  <button id="resetBtn">↺ Reset</button>
+</div>
+
+<p class="note">
+  La caméra parcourt un couloir en boucle et ne « voit » que des profondeurs bruitées.
+  Chaque image raffine un état spatial persistant au lieu de tout recalculer :
+  c'est le principe <b>autorégressif</b> de LingBot-Map.
+  Sans mémoire long terme, l'erreur d'odométrie s'accumule (<b>dérive</b>) et la carte se déforme.
+  Avec l'<b>ancrage</b> et la <b>fermeture de boucle</b>, la trajectoire est recalée quand la caméra
+  revisite une zone connue — comme la mémoire de trajectoire du Geometric Context Attention.
+</p>
+
+<script>
+"use strict";
+/* ================= scène (unités : mètres) ================= */
+const W = 12, H = 12; // monde 12×12 m
+// couloir en boucle : mur extérieur + îlot central + quelques obstacles
+const segs = [];
+function rect(x,y,w,h){
+  segs.push([x,y,x+w,y],[x+w,y,x+w,y+h],[x+w,y+h,x,y+h],[x,y+h,x,y]);
+}
+rect(0.5,0.5,11,11);      // enceinte
+rect(3.2,3.2,5.6,5.6);    // îlot central
+rect(0.9,5.4,0.55,0.9);   // obstacles le long des murs du couloir
+rect(10.6,2.0,0.5,0.9);
+rect(5.6,10.85,0.9,0.55);
+
+/* trajectoire vérité terrain : boucle rectangulaire arrondie dans le couloir */
+const PATH_R = 1.9;                 // demi-largeur de la boucle depuis le centre du couloir
+function truePose(s){               // s ∈ [0,1) → {x,y,th}
+  const cx=6, cy=6, a=4.05, b=4.05, r=0.9; // rectangle arrondi
+  const per = 4*(2*(a-r)) + 2*Math.PI*r;   // approx périmètre
+  // paramétrage par angle lissé (suffisant pour une démo)
+  const t = s*2*Math.PI;
+  const sq = (u)=>Math.sign(u)*Math.pow(Math.abs(u),0.62); // superellipse
+  const x = cx + a*sq(Math.cos(t));
+  const y = cy + b*sq(Math.sin(t));
+  // orientation = tangente (différence finie)
+  const e=0.002, t2=t+e;
+  const x2 = cx + a*sq(Math.cos(t2)), y2 = cy + b*sq(Math.sin(t2));
+  return {x,y,th:Math.atan2(y2-y,x2-x)};
+}
+
+/* ================= capteur : raycast profondeur ================= */
+const N_RAYS = 56, FOV = 78*Math.PI/180, MAX_D = 7;
+function castRay(px,py,th){
+  const dx=Math.cos(th), dy=Math.sin(th);
+  let best = MAX_D;
+  for(const [x1,y1,x2,y2] of segs){
+    const rxs = dx*(y2-y1) - dy*(x2-x1);
+    if(Math.abs(rxs) < 1e-9) continue;
+    const qx=x1-px, qy=y1-py;
+    const t = (qx*(y2-y1) - qy*(x2-x1))/rxs;   // distance le long du rayon
+    const u = (qx*dy - qy*dx)/rxs;             // position sur le segment
+    if(t>0.02 && u>=0 && u<=1 && t<best) best=t;
+  }
+  return best;
+}
+
+/* ================= état SLAM ================= */
+let frame, s, est, driftTh, driftX, driftY, pts, traj, trueTraj,
+    lastLoop, anchors, memTokens, ateSum, ateN;
+const MAX_PTS = 9000;
+
+function reset(){
+  frame=0; s=0;
+  const p0 = truePose(0);
+  est = {x:p0.x, y:p0.y, th:p0.th};
+  driftTh=0; driftX=0; driftY=0;
+  pts=new Float32Array(MAX_PTS*3); pts.n=0; // x,y,age
+  traj=[]; trueTraj=[];
+  lastLoop=-1e9; ateSum=0; ateN=0;
+  anchors=[{x:p0.x,y:p0.y}];
+  memTokens=[];
+  flashEl.classList.remove("show");
+}
+
+/* rng gaussien approx */
+function gauss(sd){ return sd*((Math.random()+Math.random()+Math.random())*2-3); }
+
+function step(){
+  const ds = 0.00115*speed;                 // avance le long de la boucle
+  const pPrev = truePose(s);
+  s = (s + ds) % 1;
+  const p = truePose(s);
+  frame++;
+
+  /* --- odométrie bruitée : la pose estimée intègre le mouvement vrai + biais --- */
+  const gca = gcaToggle.checked;
+  driftTh += gauss(0.0032) + 0.00055;       // biais de cap (dérive systématique)
+  if(gca) driftTh *= 0.9975;                // ancrage : dérive bornée
+  const mvx = p.x-pPrev.x, mvy = p.y-pPrev.y;
+  const c=Math.cos(driftTh), sn=Math.sin(driftTh);
+  est.x += mvx*c - mvy*sn + gauss(0.004);
+  est.y += mvx*sn + mvy*c + gauss(0.004);
+  est.th = p.th + driftTh;
+
+  /* --- fermeture de boucle : retour près d'un ancrage connu --- */
+  let loop=false;
+  if(gca && frame-lastLoop > 700){
+    for(const a of anchors){
+      const d = Math.hypot(p.x-a.x, p.y-a.y);
+      if(d < 0.55 && frame > 700){
+        // recalage : on résorbe l'erreur de pose et de cap
+        est.x += (p.x-est.x)*0.9;
+        est.y += (p.y-est.y)*0.9;
+        driftTh *= 0.08;
+        lastLoop = frame; loop=true;
+        break;
+      }
+    }
+  }
+  if(frame % 260 === 0 && anchors.length<10) anchors.push({x:p.x,y:p.y});
+
+  /* --- acquisition : profondeurs bruitées projetées dans le repère estimé --- */
+  const stride = 4; // 1 point stocké sur 4 rayons (lisibilité)
+  camDepths.length = 0;
+  for(let i=0;i<N_RAYS;i++){
+    const a = -FOV/2 + FOV*i/(N_RAYS-1);
+    const dTrue = castRay(p.x,p.y,p.th+a);
+    const d = dTrue + gauss(0.03)*dTrue;    // bruit ∝ distance
+    camDepths.push(d);
+    if(dTrue < MAX_D-0.01 && i%stride===0){
+      const th = est.th + a;
+      const k = (pts.n % MAX_PTS)*3;
+      pts[k]   = est.x + d*Math.cos(th);
+      pts[k+1] = est.y + d*Math.sin(th);
+      pts[k+2] = frame;
+      pts.n++;
+    }
+  }
+
+  /* --- trajectoires & métriques --- */
+  traj.push(est.x,est.y); trueTraj.push(p.x,p.y);
+  if(traj.length>6000){ traj.splice(0,2); trueTraj.splice(0,2); }
+  const ate = Math.hypot(est.x-p.x, est.y-p.y);
+  ateSum+=ate; ateN++;
+
+  /* --- mémoire compressée : 1 jeton / 40 frames --- */
+  if(frame % 40 === 0){ memTokens.push(1); if(memTokens.length>60) memTokens.shift(); }
+
+  return {p, ate, loop};
+}
+
+/* ================= rendu ================= */
+const mapC=document.getElementById("mapC"), camC=document.getElementById("camC"),
+      memC=document.getElementById("memC"), flashEl=document.getElementById("flash");
+const mctx=mapC.getContext("2d"), cctx=camC.getContext("2d"), xctx=memC.getContext("2d");
+const camDepths=[];
+let speed=1;
+
+function fit(cv){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const r=cv.getBoundingClientRect();
+  cv.width=r.width*dpr; cv.height=r.height*dpr;
+  cv.getContext("2d").setTransform(dpr,0,0,dpr,0,0);
+  return r;
+}
+let mapR,camR,memR;
+function layout(){ mapR=fit(mapC); camR=fit(camC); memR=fit(memC); }
+addEventListener("resize",layout);
+
+function drawMap(p){
+  const sc = mapR.width/W;
+  mctx.fillStyle="#021740"; mctx.fillRect(0,0,mapR.width,mapR.height);
+  // vérité terrain (murs), très discrète
+  mctx.strokeStyle="rgba(143,163,200,.28)"; mctx.lineWidth=1;
+  mctx.beginPath();
+  for(const [x1,y1,x2,y2] of segs){ mctx.moveTo(x1*sc,y1*sc); mctx.lineTo(x2*sc,y2*sc); }
+  mctx.stroke();
+  // points reconstruits
+  const n=Math.min(pts.n,MAX_PTS);
+  for(let i=0;i<n;i++){
+    const k=i*3, age=frame-pts[k+2];
+    const al = Math.max(.15, 1-age/5000);
+    mctx.fillStyle=`rgba(79,209,232,${al*0.85})`;
+    mctx.fillRect(pts[k]*sc-1, pts[k+1]*sc-1, 2,2);
+  }
+  // trajectoire vraie (pointillé) puis estimée
+  mctx.setLineDash([3,4]); mctx.strokeStyle="rgba(143,163,200,.5)"; mctx.lineWidth=1;
+  poly(mctx,trueTraj,sc); mctx.setLineDash([]);
+  mctx.strokeStyle="rgba(67,217,163,.9)"; mctx.lineWidth=1.6;
+  poly(mctx,traj,sc);
+  // ancrages
+  for(const a of anchors){
+    mctx.strokeStyle="rgba(239,51,70,.8)"; mctx.lineWidth=1;
+    mctx.strokeRect(a.x*sc-3,a.y*sc-3,6,6);
+  }
+  // caméra estimée : triangle rouge + FOV
+  mctx.save(); mctx.translate(est.x*sc,est.y*sc); mctx.rotate(est.th);
+  mctx.fillStyle="rgba(239,51,70,.14)";
+  mctx.beginPath(); mctx.moveTo(0,0);
+  mctx.arc(0,0,2.2*sc,-FOV/2,FOV/2); mctx.closePath(); mctx.fill();
+  mctx.fillStyle="#EF3346";
+  mctx.beginPath(); mctx.moveTo(9,0); mctx.lineTo(-5,5); mctx.lineTo(-5,-5); mctx.closePath(); mctx.fill();
+  mctx.restore();
+}
+function poly(ctx,arr,sc){
+  if(arr.length<4) return;
+  ctx.beginPath(); ctx.moveTo(arr[0]*sc,arr[1]*sc);
+  for(let i=2;i<arr.length;i+=2) ctx.lineTo(arr[i]*sc,arr[i+1]*sc);
+  ctx.stroke();
+}
+
+function drawCam(){
+  const w=camR.width,h=camR.height,n=camDepths.length;
+  cctx.fillStyle="#021740"; cctx.fillRect(0,0,w,h);
+  const cw=w/n;
+  for(let i=0;i<n;i++){
+    const d=camDepths[i];
+    const ch=Math.min(h, h*1.35/(d*0.55+0.35));
+    const sh=Math.max(0,1-d/MAX_D);
+    cctx.fillStyle=`rgb(${20+150*sh},${40+140*sh},${90+150*sh})`;
+    cctx.fillRect(i*cw,(h-ch)/2,Math.ceil(cw),ch);
+  }
+  cctx.fillStyle="rgba(2,23,64,.55)"; cctx.fillRect(0,h*0.72,w,h*0.28); // sol
+}
+
+function drawMem(){
+  const w=memR.width,h=memR.height;
+  xctx.fillStyle="#021740"; xctx.fillRect(0,0,w,h);
+  const y=h/2, sz=7;
+  // ancrage
+  for(let i=0;i<anchors.length;i++){
+    xctx.fillStyle="#EF3346";
+    xctx.fillRect(8+i*(sz+3), y-sz*1.6, sz,sz);
+  }
+  // mémoire compressée
+  const x0 = 8+anchors.length*(sz+3)+14;
+  for(let i=0;i<memTokens.length;i++){
+    xctx.fillStyle="rgba(255,180,84,.85)";
+    xctx.fillRect(x0+i*(sz-1), y-sz/2, sz-2,sz);
+  }
+  // fenêtre locale (8 dernières frames)
+  for(let i=0;i<8;i++){
+    xctx.fillStyle="#4FD1E8";
+    xctx.fillRect(w-14-i*(sz+2), y+sz*0.7, sz,sz);
+  }
+  document.getElementById("memVal").textContent =
+    `${anchors.length} ancres · ${memTokens.length} jetons · fen. 8`;
+}
+
+/* ================= boucle ================= */
+const frameVal=document.getElementById("frameVal"), fpsVal=document.getElementById("fpsVal"),
+      ptsVal=document.getElementById("ptsVal"), ateVal=document.getElementById("ateVal"),
+      poseVal=document.getElementById("poseVal"), gcaToggle=document.getElementById("gcaToggle");
+let playing=true, lastT=performance.now(), fps=0;
+
+function tick(t){
+  requestAnimationFrame(tick);
+  if(!playing) return;
+  const dt=t-lastT; lastT=t;
+  fps = fps*0.9 + (1000/Math.max(dt,1))*0.1;
+
+  let out;
+  for(let i=0;i<speed;i++) out=step();
+  drawMap(out.p); drawCam(); drawMem();
+
+  frameVal.textContent=frame;
+  fpsVal.innerHTML=Math.round(fps)+"<small> fps</small>";
+  ptsVal.textContent=Math.min(pts.n,MAX_PTS);
+  const cm=out.ate*100;
+  ateVal.innerHTML=cm.toFixed(0)+"<small> cm</small>";
+  ateVal.className="val mono "+(cm>40?"bad":"ok");
+  poseVal.textContent=`x ${est.x.toFixed(1)}  y ${est.y.toFixed(1)}  θ ${(est.th*180/Math.PI%360).toFixed(0)}°`;
+
+  if(out.loop){
+    flashEl.classList.add("show");
+    setTimeout(()=>flashEl.classList.remove("show"),1500);
+  }
+}
+
+/* ================= contrôles ================= */
+const playBtn=document.getElementById("playBtn"),
+      resetBtn=document.getElementById("resetBtn"),
+      speedBtn=document.getElementById("speedBtn");
+playBtn.onclick=()=>{
+  playing=!playing; lastT=performance.now();
+  playBtn.textContent = playing? "⏸ Pause":"▶ Lecture";
+  playBtn.classList.toggle("paused",!playing);
+};
+resetBtn.onclick=()=>reset();
+const SPEEDS=[1,2,4];
+speedBtn.onclick=()=>{
+  speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length];
+  speedBtn.textContent="×"+speed;
+};
+
+layout(); reset(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>

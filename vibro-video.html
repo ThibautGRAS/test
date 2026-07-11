@@ -155,6 +155,7 @@
   </div>
   <div class="row" style="margin-top:8px">
     <button id="modeRoiBtn" class="on" title="Cliquer = point (ROI 32 px) ou tracer un rectangle. Glisser pour déplacer, coin bas-droit pour redimensionner.">Mode : sélection ROI</button>
+    <button id="modeFixBtn" title="Rectangle vert sur une zone du fond parfaitement immobile — sert à corriger le mouvement de caméra">Mode : zone fixe</button>
     <button id="modeCalBtn" title="Tracer une ligne entre deux points de distance connue">Mode : calibration</button>
     <button class="small" id="resetSelBtn">Réinitialiser sélection</button>
   </div>
@@ -293,9 +294,63 @@
 </div>
 </details>
 
-<!-- ============ 7. MOUVEMENT AMPLIFIÉ (EULÉRIEN) ============ -->
+<!-- ============ 7. CHAMP VIBRATOIRE MULTI-POINTS ============ -->
+<details id="secField">
+<summary>7 · Champ vibratoire (multi-points Shi–Tomasi + LK)</summary>
+<div class="body">
+  <div class="meta">Détecte automatiquement des points contrastés dans la ROI, les suit par <b>Lucas–Kanade pyramidal</b> avec validation aller-retour, corrige le mouvement de caméra par la <b>zone fixe</b> (verte, à définir dans le lecteur), puis calcule la FFT complexe de chaque trajectoire : <b>amplitude et phase par point</b>.</div>
+  <div class="grid" style="margin:8px 0">
+    <div><label for="fpNpts" title="Points Shi-Tomasi détectés dans la ROI vibrante">Nombre de points (30–200)</label><input type="number" id="fpNpts" value="80" min="30" max="200"></div>
+    <div><label for="fpF0" title="Fréquence d'analyse pour amplitude/phase. 0 = auto (pic dominant)">Fréquence d'analyse (Hz, 0 = auto)</label><input type="number" id="fpF0" value="0" min="0" step="0.1"></div>
+    <div>
+      <label for="fieldModeSel">Affichage</label>
+      <select id="fieldModeSel">
+        <option value="amp">Carte d'amplitude</option>
+        <option value="phase">Carte de phase</option>
+        <option value="vec">Vecteurs de déformée</option>
+      </select>
+    </div>
+    <div><label>&nbsp;</label><button class="primary" id="fieldBtn" disabled>Suivre les points</button></div>
+  </div>
+  <div class="vid-wrap"><canvas id="fieldC" width="640" height="360"></canvas></div>
+  <div class="row" style="margin-top:6px;align-items:center">
+    <canvas id="fieldLegC" width="180" height="14" style="border-radius:3px"></canvas>
+    <span class="meta mono" id="fieldLegTxt">—</span>
+  </div>
+  <div class="meta" id="fieldInfo" style="margin-top:6px">Sans zone fixe définie, pas de correction caméra (trépied indispensable).</div>
+</div>
+</details>
+
+<!-- ============ 8. MOTION REPLAY (ODS) ============ -->
+<details id="secReplay">
+<summary>8 · Motion replay — ODS animée</summary>
+<div class="body">
+  <div class="meta">Rejoue la <b>déformée opérationnelle</b> : l'image de référence est déformée par triangulation de Delaunay entre les points suivis, chaque point oscillant selon son amplitude et sa phase mesurées. Nécessite un suivi multi-points (section 7).</div>
+  <div class="grid" style="margin:8px 0">
+    <div><label for="rpF0">Fréquence centrale (Hz)</label><input type="number" id="rpF0" value="0" min="0" step="0.1"></div>
+    <div>
+      <label for="rpModeSel" title="A : coefficient FFT unique, animation propre (résonance, ordre moteur). B : signal filtré passe-bande rejoué, conserve modulations et battements.">Reconstruction</label>
+      <select id="rpModeSel">
+        <option value="ods">A — ODS sinusoïdale</option>
+        <option value="bp">B — Relecture bande étroite</option>
+      </select>
+    </div>
+    <div><label for="rpBw">Largeur de bande ± (Hz, mode B)</label><input type="number" id="rpBw" value="1" min="0.1" step="0.1"></div>
+    <div><label for="rpAlpha">Amplification ×<span id="rpAlphaVal">100</span></label><input type="range" id="rpAlpha" min="10" max="500" step="10" value="100"></div>
+    <div>
+      <label for="rpSpeed">Vitesse de lecture</label>
+      <select id="rpSpeed"><option value="0.1">0.1×</option><option value="0.25" selected>0.25×</option><option value="0.5">0.5×</option><option value="1">1×</option></select>
+    </div>
+    <div><label>&nbsp;</label><button class="primary" id="rpBtn" disabled>▶ Rejouer la déformée</button></div>
+  </div>
+  <div class="vid-wrap"><canvas id="replayC" width="640" height="360"></canvas></div>
+  <div class="hint">Visualisation amplifiée — les amplitudes réelles sont celles des sections 4-5 et 7. Calibration valable dans le plan de la surface uniquement ; les mouvements hors plan ne sont pas mesurés avec une seule caméra.</div>
+</div>
+</details>
+
+<!-- ============ 9. MOUVEMENT AMPLIFIÉ (EULÉRIEN) ============ -->
 <details id="secAmp">
-<summary>7 · Mouvement amplifié (magnification eulérienne)</summary>
+<summary>9 · Mouvement amplifié (magnification eulérienne)</summary>
 <div class="body">
   <div class="warn">Mode illustratif (principe MIT « Eulerian Video Magnification ») : les variations temporelles d'intensité de la ROI sont amplifiées à la lecture. Visualisation seulement, pas une mesure.</div>
   <div class="grid" style="margin:8px 0">
@@ -311,7 +366,7 @@
 
 <!-- ============ 8. COMPARAISON ============ -->
 <details id="secCmp">
-<summary>8 · Comparaison avec une référence</summary>
+<summary>10 · Comparaison avec une référence</summary>
 <div class="body">
   <div class="row">
     <button id="cmpBtn">Importer spectre de référence (CSV)</button>
@@ -326,7 +381,7 @@
 
 <!-- ============ 8. EXPORT & RAPPORT ============ -->
 <details id="secExp">
-<summary>9 · Export & rapport de synthèse</summary>
+<summary>11 · Export & rapport de synthèse</summary>
 <div class="body">
   <div class="row">
     <button class="small" id="expTimeBtn">CSV temporel</button>
@@ -342,7 +397,7 @@
 
 <!-- ============ 9. CONSEILS IPHONE ============ -->
 <details>
-<summary>10 · Précautions vidéos iPhone</summary>
+<summary>12 · Précautions vidéos iPhone</summary>
 <div class="body">
   <ul class="tips">
     <li>Utiliser la caméra arrière principale <b>1×</b> (pas d'ultra grand-angle ni de zoom numérique)</li>
@@ -508,7 +563,7 @@ $("fileIn").onchange=e=>{
     $("fileMeta").innerHTML=`<b>${f.name}</b> — ${fmtF(S.dur,2)} s — ${S.vw}×${S.vh}. `+
       `Le framerate n'est pas exposé de façon fiable par le navigateur : <b>vérifie-le manuellement</b> (réglage iPhone).`;
     $("t1In").value=fmtF(S.dur,2);
-    $("runBtn").disabled=false;$("mapBtn").disabled=false;
+    $("runBtn").disabled=false;$("mapBtn").disabled=false;$("fieldBtn").disabled=false;
     sizeCanvas();seekTo(0).then(draw);
     if(/\.mov$/i.test(f.name))
       $("fileMeta").innerHTML+=`<div class="warn">.mov : selon le codec (HEVC), certains navigateurs ne le lisent pas — si l'image reste noire, réexporter en .mp4 H.264.</div>`;
@@ -562,6 +617,13 @@ function draw(){
     dctx.fillStyle="#EF3346";
     dctx.fillRect((S.roi.x+S.roi.w)*sc-8,(S.roi.y+S.roi.h)*sc-8,8,8);  // grip
   }
+  if(S.fixRoi){
+    dctx.strokeStyle="#43D9A3";dctx.lineWidth=2;dctx.setLineDash([5,4]);
+    dctx.strokeRect(S.fixRoi.x*sc,S.fixRoi.y*sc,S.fixRoi.w*sc,S.fixRoi.h*sc);
+    dctx.setLineDash([]);
+    dctx.fillStyle="#43D9A3";dctx.font="10px Arial";
+    dctx.fillText("zone fixe",S.fixRoi.x*sc+3,S.fixRoi.y*sc+12);
+  }
   if(S.cal){
     dctx.strokeStyle="#4FD1E8";dctx.lineWidth=2;
     dctx.beginPath();dctx.moveTo(S.cal.x1*sc,S.cal.y1*sc);dctx.lineTo(S.cal.x2*sc,S.cal.y2*sc);dctx.stroke();
@@ -593,9 +655,13 @@ addEventListener("keydown",e=>{
 });
 
 /* ─── sélection ROI / calibration (pointer) ─── */
-$("modeRoiBtn").onclick=()=>{S.mode="roi";$("modeRoiBtn").classList.add("on");$("modeCalBtn").classList.remove("on");};
-$("modeCalBtn").onclick=()=>{S.mode="cal";$("modeCalBtn").classList.add("on");$("modeRoiBtn").classList.remove("on");};
-$("resetSelBtn").onclick=()=>{S.roi=null;S.cal=null;S.mmPerPx=0;updSelMeta();draw();};
+function setMode(m){S.mode=m;
+  for(const[id,mm]of[["modeRoiBtn","roi"],["modeFixBtn","fix"],["modeCalBtn","cal"]])
+    $(id).classList.toggle("on",m===mm);}
+$("modeRoiBtn").onclick=()=>setMode("roi");
+$("modeFixBtn").onclick=()=>setMode("fix");
+$("modeCalBtn").onclick=()=>setMode("cal");
+$("resetSelBtn").onclick=()=>{S.roi=null;S.fixRoi=null;S.cal=null;S.mmPerPx=0;updSelMeta();draw();};
 
 let ptr=null;
 dispC.addEventListener("pointerdown",e=>{
@@ -606,12 +672,13 @@ dispC.addEventListener("pointerdown",e=>{
   dispC.setPointerCapture(e.pointerId);
   if(S.mode==="cal"){ptr={type:"cal",x:cx,y:cy};S.cal={x1:cx,y1:cy,x2:cx,y2:cy};}
   else{
-    if(S.roi){
-      const gx=S.roi.x+S.roi.w,gy=S.roi.y+S.roi.h;
-      if(Math.abs(cx-gx)<14/v2c()*(dispC.width/dispC.width)&&Math.abs(cy-gy)<14){ptr={type:"resize"};return;}
-      if(cx>S.roi.x&&cx<gx&&cy>S.roi.y&&cy<gy){ptr={type:"move",dx:cx-S.roi.x,dy:cy-S.roi.y};return;}
+    const key=S.mode==="fix"?"fixRoi":"roi",R=S[key];
+    if(R){
+      const gx=R.x+R.w,gy=R.y+R.h;
+      if(Math.abs(cx-gx)<14&&Math.abs(cy-gy)<14){ptr={type:"resize",key};return;}
+      if(cx>R.x&&cx<gx&&cy>R.y&&cy<gy){ptr={type:"move",key,dx:cx-R.x,dy:cy-R.y};return;}
     }
-    ptr={type:"draw",x:cx,y:cy};S.roi={x:cx,y:cy,w:1,h:1};
+    ptr={type:"draw",key,x:cx,y:cy};S[key]={x:cx,y:cy,w:1,h:1};
   }
   e.preventDefault();
 });
@@ -620,18 +687,18 @@ dispC.addEventListener("pointermove",e=>{
   const r=dispC.getBoundingClientRect();
   const cx=(e.clientX-r.left)*(dispC.width/r.width)/v2c();
   const cy=(e.clientY-r.top)*(dispC.width/r.width)/v2c();
+  const R=ptr.key?S[ptr.key]:null;
   if(ptr.type==="cal"){S.cal.x2=cx;S.cal.y2=cy;}
-  else if(ptr.type==="draw"){S.roi.w=cx-ptr.x;S.roi.h=cy-ptr.y;
-    S.roi.x=Math.min(ptr.x,cx);S.roi.y=Math.min(ptr.y,cy);
-    S.roi.w=Math.abs(S.roi.w);S.roi.h=Math.abs(S.roi.h);}
-  else if(ptr.type==="move"){S.roi.x=cx-ptr.dx;S.roi.y=cy-ptr.dy;}
-  else if(ptr.type==="resize"){S.roi.w=Math.max(10,cx-S.roi.x);S.roi.h=Math.max(10,cy-S.roi.y);}
+  else if(ptr.type==="draw"){R.x=Math.min(ptr.x,cx);R.y=Math.min(ptr.y,cy);
+    R.w=Math.abs(cx-ptr.x);R.h=Math.abs(cy-ptr.y);}
+  else if(ptr.type==="move"){R.x=cx-ptr.dx;R.y=cy-ptr.dy;}
+  else if(ptr.type==="resize"){R.w=Math.max(10,cx-R.x);R.h=Math.max(10,cy-R.y);}
   draw();
 });
 dispC.addEventListener("pointerup",e=>{
   if(!ptr)return;
-  if(ptr.type==="draw"&&S.roi&&(S.roi.w<8||S.roi.h<8)){    // simple clic → ROI 32 px
-    S.roi={x:S.roi.x-16,y:S.roi.y-16,w:32,h:32};
+  if(ptr.type==="draw"){const R=S[ptr.key];
+    if(R&&(R.w<8||R.h<8))S[ptr.key]={x:R.x-16,y:R.y-16,w:32,h:32};   // simple clic → 32 px
   }
   if(ptr.type==="cal"){
     const d=Math.hypot(S.cal.x2-S.cal.x1,S.cal.y2-S.cal.y1);
@@ -651,7 +718,7 @@ function clampRoi(){
   S.roi.h=Math.max(10,Math.min(S.vh-S.roi.y,S.roi.h));
 }
 function updSelMeta(){
-  $("roiVal").textContent=S.roi?`ROI : ${Math.round(S.roi.w)}×${Math.round(S.roi.h)} px @ (${Math.round(S.roi.x)}, ${Math.round(S.roi.y)})`:"ROI : non définie";
+  $("roiVal").textContent=(S.roi?`ROI : ${Math.round(S.roi.w)}×${Math.round(S.roi.h)} px`:"ROI : non définie")+(S.fixRoi?" · zone fixe OK":" · zone fixe : non définie");
   $("calVal").textContent=S.mmPerPx?`${fmtF(S.mmPerPx,4)} mm/px`:"non calibré";
 }
 
@@ -1115,7 +1182,457 @@ for(const id of["mapModeSel","mapOpIn"])$(id).addEventListener("input",()=>{
   $("mapOpVal").textContent=$("mapOpIn").value;renderMap();
 });
 
-/* ═══════════════ MAGNIFICATION EULÉRIENNE (lecture) ═══════════════ */
+/* ═══════════════ CHAMP VIBRATOIRE MULTI-POINTS ═══════════════ */
+let FIELD=null, fieldRefFrame=null;
+
+function grayFull(scale){                     // frame entière en gris, échelle réduite
+  const w=Math.round(S.vw*scale),h=Math.round(S.vh*scale);
+  grabC.width=w;grabC.height=h;
+  gctx.drawImage(video,0,0,w,h);
+  const d=gctx.getImageData(0,0,w,h).data,g=new Float32Array(w*h);
+  for(let i=0,p=0;i<g.length;i++,p+=4)g[i]=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
+  return {g,w,h};
+}
+function buildPyr(f,levels){
+  const pyr=[f];
+  for(let l=1;l<levels;l++){
+    const s=pyr[l-1],pw=s.w>>1,ph=s.h>>1,pg=new Float32Array(pw*ph);
+    for(let y=0;y<ph;y++)for(let x=0;x<pw;x++){
+      const i=2*y*s.w+2*x;
+      pg[y*pw+x]=(s.g[i]+s.g[i+1]+s.g[i+s.w]+s.g[i+s.w+1])/4;
+    }
+    pyr.push({g:pg,w:pw,h:ph});
+  }
+  return pyr;
+}
+/* Shi–Tomasi : λmin du tenseur de structure, non-max par distance minimale */
+function shiTomasi(f,rect,nWant){
+  const {g,w,h}=f;
+  const x0=Math.max(4,Math.round(rect.x)),y0=Math.max(4,Math.round(rect.y));
+  const x1=Math.min(w-4,Math.round(rect.x+rect.w)),y1=Math.min(h-4,Math.round(rect.y+rect.h));
+  const cands=[];
+  for(let y=y0;y<y1;y+=2)for(let x=x0;x<x1;x+=2){
+    let a=0,b=0,c=0;
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+      const i=(y+dy)*w+(x+dx);
+      const ix=(g[i+1]-g[i-1])/2,iy=(g[i+w]-g[i-w])/2;
+      a+=ix*ix;b+=ix*iy;c+=iy*iy;
+    }
+    const lm=(a+c)/2-Math.sqrt(((a-c)/2)**2+b*b);
+    if(lm>60)cands.push({x,y,l:lm});
+  }
+  cands.sort((p,q)=>q.l-p.l);
+  const minDist=Math.max(6,0.75*Math.sqrt((x1-x0)*(y1-y0)/nWant));
+  const pts=[];
+  for(const c of cands){
+    if(pts.every(p=>Math.hypot(p.x-c.x,p.y-c.y)>=minDist))pts.push({x:c.x,y:c.y});
+    if(pts.length>=nWant)break;
+  }
+  return pts;
+}
+/* LK itératif un niveau, fenêtre 15×15, échantillonnage bilinéaire */
+function lkLevel(prev,cur,px,py,gx,gy){
+  const HW=7,{g:P,w:pw,h:ph}=prev,{g:C,w:cw,h:ch}=cur;
+  if(px<HW+1||py<HW+1||px>pw-HW-2||py>ph-HW-2)return null;
+  /* gradients + G sur le patch précédent */
+  const N=(2*HW+1)**2,Ix=new Float32Array(N),Iy=new Float32Array(N),T=new Float32Array(N);
+  let gxx=0,gxy=0,gyy=0,k=0;
+  for(let dy=-HW;dy<=HW;dy++)for(let dx=-HW;dx<=HW;dx++,k++){
+    const v=bilin(P,pw,ph,px+dx,py+dy);
+    const vx=(bilin(P,pw,ph,px+dx+1,py+dy)-bilin(P,pw,ph,px+dx-1,py+dy))/2;
+    const vy=(bilin(P,pw,ph,px+dx,py+dy+1)-bilin(P,pw,ph,px+dx,py+dy-1))/2;
+    if(v===null||vx===null)return null;
+    T[k]=v;Ix[k]=vx;Iy[k]=vy;gxx+=vx*vx;gxy+=vx*vy;gyy+=vy*vy;
+  }
+  const det=gxx*gyy-gxy*gxy;
+  if(Math.abs(det)<1e-4)return null;
+  let qx=gx,qy=gy;
+  for(let it=0;it<15;it++){
+    let bx=0,by=0;k=0;
+    for(let dy=-HW;dy<=HW;dy++)for(let dx=-HW;dx<=HW;dx++,k++){
+      const v=bilin(C,cw,ch,qx+dx,qy+dy);
+      if(v===null)return null;
+      const e=T[k]-v;bx+=Ix[k]*e;by+=Iy[k]*e;
+    }
+    const ddx=(gyy*bx-gxy*by)/det,ddy=(gxx*by-gxy*bx)/det;
+    qx+=ddx;qy+=ddy;
+    if(Math.hypot(ddx,ddy)<0.02)break;
+  }
+  return {x:qx,y:qy};
+}
+/* LK pyramidal : du niveau grossier au fin */
+function trackPyr(prevPyr,curPyr,px,py){
+  const L=prevPyr.length;
+  let gx=0,gy=0;                              // déplacement estimé (repère niveau courant)
+  for(let l=L-1;l>=0;l--){
+    const s=1/(1<<l);
+    const r=lkLevel(prevPyr[l],curPyr[l],px*s,py*s,px*s+gx,py*s+gy);
+    if(!r)return null;
+    gx=r.x-px*s;gy=r.y-py*s;
+    if(l>0){gx*=2;gy*=2;}
+  }
+  return {x:px+gx,y:py+gy};
+}
+function median(a){
+  const v=a.filter(isFinite).sort((x,y)=>x-y);
+  return v.length?v[v.length>>1]:0;
+}
+
+$("fieldBtn").onclick=async()=>{
+  if(!S.loaded){alert("Charger une vidéo d'abord.");return;}
+  if(!S.roi){alert("Définir la ROI vibrante (rouge).");return;}
+  saveParams();
+  S.playing=false;video.pause();$("playBtn").textContent="▶";
+  S.stop=false;$("fieldBtn").disabled=true;$("stopBtn").disabled=false;
+  $("progWrap").style.display="block";
+
+  const fps=S.fps=+$("fpsIn").value||30;
+  const t0=+$("t0In").value||0;
+  let t1=+$("t1In").value||S.dur;if(t1<=t0)t1=S.dur;t1=Math.min(t1,S.dur);
+  let n=Math.floor((t1-t0)*fps);if(n>1200)n=1200;
+  const scale=Math.min(1,640/S.vw);
+  const alerts=[];
+  clampRoi();
+
+  /* détection sur la 1re image */
+  await seekTo(t0);
+  let prev=grayFull(scale);
+  const nWant=Math.max(30,Math.min(200,+$("fpNpts").value||80));
+  const rScl=r=>({x:r.x*scale,y:r.y*scale,w:r.w*scale,h:r.h*scale});
+  const structPts=shiTomasi(prev,rScl(S.roi),nWant);
+  const fixPts=S.fixRoi?shiTomasi(prev,rScl(S.fixRoi),20):[];
+  if(structPts.length<10){alert("Trop peu de points contrastés dans la ROI ("+structPts.length+") — zone plus texturée requise.");endField();return;}
+  if(!S.fixRoi)alerts.push("Pas de zone fixe : mouvement caméra non corrigé (trépied indispensable).");
+  else if(fixPts.length<4)alerts.push("Zone fixe peu contrastée ("+fixPts.length+" points) : correction caméra fragile.");
+  const all=structPts.concat(fixPts),nP=all.length,nS=structPts.length;
+
+  /* trajectoires */
+  const X=new Float32Array(nP*n),Y=new Float32Array(nP*n);
+  const alive=new Uint8Array(nP).fill(1);
+  const pos=all.map(p=>({x:p.x,y:p.y}));
+  for(let i=0;i<nP;i++){X[i*n]=pos[i].x;Y[i*n]=pos[i].y;}
+  let prevPyr=buildPyr(prev,3);
+  /* image de fond au format affichage */
+  fieldRefFrame=document.createElement("canvas");
+  fieldRefFrame.width=dispC.width;fieldRefFrame.height=dispC.height;
+  fieldRefFrame.getContext("2d").drawImage(video,0,0,dispC.width,dispC.height);
+
+  const FB=0.7*scale+0.35, startT=performance.now();
+  for(let k=1;k<n;k++){
+    if(S.stop){alerts.push("Suivi interrompu à l'image "+k+".");n=k;break;}
+    await seekTo(t0+k/fps);
+    const cur=grayFull(scale),curPyr=buildPyr(cur,3);
+    for(let i=0;i<nP;i++){
+      if(!alive[i]){X[i*n+k]=NaN;Y[i*n+k]=NaN;continue;}
+      const f=trackPyr(prevPyr,curPyr,pos[i].x,pos[i].y);
+      let ok=!!f;
+      if(ok){                                  /* validation aller-retour */
+        const b=trackPyr(curPyr,prevPyr,f.x,f.y);
+        ok=b&&Math.hypot(b.x-pos[i].x,b.y-pos[i].y)<FB;
+      }
+      if(ok){pos[i].x=f.x;pos[i].y=f.y;X[i*n+k]=f.x;Y[i*n+k]=f.y;}
+      else{alive[i]=0;X[i*n+k]=NaN;Y[i*n+k]=NaN;}
+    }
+    prevPyr=curPyr;
+    if(k%4===0){
+      const pct=k/n*100,el=(performance.now()-startT)/1000;
+      $("progFill").style.width=pct+"%";
+      $("progTxt").textContent=`suivi : image ${k}/${n} — ${fmtF(pct,0)} % — ${alive.slice(0,nS).reduce((a,b)=>a+b,0)}/${nS} points actifs — ~${fmtF(el/k*(n-k),0)} s restantes`;
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+
+  /* correction caméra : médiane du déplacement des points fixes */
+  const camX=new Float32Array(n),camY=new Float32Array(n);
+  if(fixPts.length>=4){
+    for(let k=0;k<n;k++){
+      const dx=[],dy=[];
+      for(let i=nS;i<nP;i++)if(isFinite(X[i*n+k])){dx.push(X[i*n+k]-X[i*n]);dy.push(Y[i*n+k]-Y[i*n]);}
+      camX[k]=median(dx);camY[k]=median(dy);
+    }
+    const cs=stats(Array.from(camX));
+    if(cs.pp*1/scale>0.05)alerts.push("Mouvement caméra corrigé : "+fmtF(cs.pp/scale,2)+" px crête-crête.");
+  }
+
+  /* déplacements corrigés en px vidéo natifs + rejet des aberrants (médiane) */
+  const ux=[],uy=[],valid=[];
+  const rmsAll=[];
+  for(let i=0;i<nS;i++){
+    const vx=new Float32Array(n),vy=new Float32Array(n);
+    let miss=0;
+    for(let k=0;k<n;k++){
+      if(isFinite(X[i*n+k])){vx[k]=(X[i*n+k]-X[i*n]-camX[k])/scale;vy[k]=(Y[i*n+k]-Y[i*n]-camY[k])/scale;}
+      else{vx[k]=NaN;vy[k]=NaN;miss++;}
+    }
+    ux.push(vx);uy.push(vy);
+    valid.push(miss<0.15*n);
+    if(valid[i])rmsAll.push(stats(Array.from(vx)).rms+stats(Array.from(vy)).rms);
+  }
+  const medR=median(rmsAll);
+  for(let i=0;i<nS;i++)if(valid[i]){          /* rejet : RMS > 6× médiane = aberrant */
+    const r=stats(Array.from(ux[i])).rms+stats(Array.from(uy[i])).rms;
+    if(medR>0&&r>6*medR)valid[i]=false;
+  }
+  const nOk=valid.filter(Boolean).length;
+  if(nOk<8){alert("Trop peu de points valides ("+nOk+"). Améliorer contraste/lumière ou réduire la zone.");endField();return;}
+  alerts.push(nOk+"/"+nS+" points valides après validation aller-retour et rejet des aberrants.");
+
+  /* fréquence dominante auto : FFT de la trajectoire médiane X */
+  const medSig=new Float64Array(n);
+  for(let k=0;k<n;k++){
+    const vals=[];for(let i=0;i<nS;i++)if(valid[i]&&isFinite(ux[i][k]))vals.push(ux[i][k]);
+    medSig[k]=median(vals);
+  }
+  const sp=ampSpectrum(detrend(Array.from(medSig),true),fps,"hann");
+  const pks=findPeaks(sp.f,sp.a,3);
+  let f0=+$("fpF0").value||0;
+  if(f0<=0&&pks.length){f0=pks[0].f;$("fpF0").value=fmtF(f0,2);}
+  if(f0<=0)f0=fps/8;
+  if(+$("rpF0").value<=0)$("rpF0").value=fmtF(f0,2);
+
+  /* DFT complexe par point à f0 (Hann, moyenne retirée) */
+  const w0=2*Math.PI*f0/fps,win=makeWindow(n,"hann");
+  let cg=0;for(const v of win)cg+=v;cg/=n;
+  const dftAxis=sig=>{
+    const s=detrend(Array.from(sig).map(v=>isFinite(v)?v:0),true);
+    let rr=0,ii=0;
+    for(let k=0;k<n;k++){rr+=s[k]*win[k]*Math.cos(w0*k);ii-=s[k]*win[k]*Math.sin(w0*k);}
+    return {A:2*Math.hypot(rr,ii)/(n*cg),ph:Math.atan2(ii,rr)};
+  };
+  const pts=[];
+  for(let i=0;i<nS;i++){
+    const dx=dftAxis(ux[i]),dy=dftAxis(uy[i]);
+    pts.push({x:X[i*n]/scale,y:Y[i*n]/scale,valid:valid[i],
+      Ax:dx.A,phx:dx.ph,Ay:dy.A,phy:dy.ph,A:Math.hypot(dx.A,dy.A),
+      ux:ux[i],uy:uy[i]});
+  }
+  FIELD={pts,n,fps,f0,scale,alerts,nOk,roi:{...S.roi}};
+  endField();
+  $("progTxt").textContent=`suivi terminé : ${nOk} points valides, f₀ = ${fmtF(f0,2)} Hz (dominante ${pks.length?fmtF(pks[0].f,2)+" Hz":"—"})`;
+  $("fieldInfo").textContent=FIELD.alerts.join(" · ");
+  $("secField").open=true;$("secReplay").open=true;
+  $("rpBtn").disabled=false;
+  renderField();
+};
+function endField(){
+  $("fieldBtn").disabled=false;$("stopBtn").disabled=true;
+  $("progFill").style.width="100%";
+}
+function renderField(){
+  if(!FIELD)return;
+  const c=$("fieldC"),ctx=c.getContext("2d");
+  c.width=dispC.width;c.height=dispC.height;
+  ctx.fillStyle="#021740";ctx.fillRect(0,0,c.width,c.height);
+  if(fieldRefFrame)ctx.drawImage(fieldRefFrame,0,0,c.width,c.height);
+  ctx.fillStyle="rgba(0,20,50,.35)";ctx.fillRect(0,0,c.width,c.height);
+  const mode=$("fieldModeSel").value,sc=v2c();
+  const vmax=percentile(FIELD.pts.filter(p=>p.valid).map(p=>p.A),0.98)||1;
+  const uf=unitFactor();
+  /* phase de référence = point de plus forte amplitude, axe dominant */
+  const ref=FIELD.pts.filter(p=>p.valid).sort((a,b)=>b.A-a.A)[0]||{phx:0,phy:0,Ax:1,Ay:0};
+  const phRef=ref.Ax>=ref.Ay?ref.phx:ref.phy;
+  for(const p of FIELD.pts){
+    const px=p.x*sc,py=p.y*sc;
+    if(!p.valid){
+      ctx.strokeStyle="rgba(160,170,190,.7)";ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(px-3,py-3);ctx.lineTo(px+3,py+3);
+      ctx.moveTo(px+3,py-3);ctx.lineTo(px-3,py+3);ctx.stroke();
+      continue;
+    }
+    if(mode==="vec"){
+      const s=26/vmax;
+      const ph=(p.Ax>=p.Ay?p.phx:p.phy)-phRef;
+      const dx=p.Ax*Math.cos(p.phx-phRef)*s,dy=p.Ay*Math.cos(p.phy-phRef)*s;
+      const [r,g,b]=cmap(p.A/vmax);
+      ctx.strokeStyle=`rgb(${r},${g},${b})`;ctx.lineWidth=1.6;
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+dx,py+dy);ctx.stroke();
+      const a=Math.atan2(dy,dx);
+      ctx.beginPath();ctx.moveTo(px+dx,py+dy);
+      ctx.lineTo(px+dx-5*Math.cos(a-0.4),py+dy-5*Math.sin(a-0.4));
+      ctx.lineTo(px+dx-5*Math.cos(a+0.4),py+dy-5*Math.sin(a+0.4));
+      ctx.closePath();ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fill();
+    }else{
+      let col;
+      if(mode==="phase"){
+        const ph=((p.Ax>=p.Ay?p.phx:p.phy)-phRef+3*Math.PI)%(2*Math.PI)-Math.PI;
+        col=hsl2rgb((ph+Math.PI)/(2*Math.PI)*360,0.9,0.55);
+      }else col=cmap(p.A/vmax);
+      ctx.beginPath();ctx.arc(px,py,4.5,0,7);
+      ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},.95)`;ctx.fill();
+      ctx.strokeStyle="rgba(0,0,0,.4)";ctx.lineWidth=.5;ctx.stroke();
+    }
+  }
+  /* légende */
+  const lc=$("fieldLegC"),lctx=lc.getContext("2d");
+  for(let x=0;x<lc.width;x++){
+    const col=mode==="phase"?hsl2rgb(x/lc.width*360,0.9,0.55):cmap(x/lc.width);
+    lctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;lctx.fillRect(x,0,1,lc.height);
+  }
+  $("fieldLegTxt").textContent=mode==="phase"
+    ?`phase relative −180°→+180° @ ${fmtF(FIELD.f0,2)} Hz`
+    :`0 → ${fmtF(vmax*uf.f,3)} ${uf.lbl} @ ${fmtF(FIELD.f0,2)} Hz (× croix grises = points perdus)`;
+}
+$("fieldModeSel").addEventListener("change",renderField);
+$("fpF0").addEventListener("change",()=>{     /* recalcul DFT sans re-suivre */
+  if(!FIELD)return;
+  const f0=+$("fpF0").value;if(f0<=0)return;
+  const n=FIELD.n,w0=2*Math.PI*f0/FIELD.fps,win=makeWindow(n,"hann");
+  let cg=0;for(const v of win)cg+=v;cg/=n;
+  for(const p of FIELD.pts){
+    for(const ax of ["x","y"]){
+      const s=detrend(Array.from(ax==="x"?p.ux:p.uy).map(v=>isFinite(v)?v:0),true);
+      let rr=0,ii=0;
+      for(let k=0;k<n;k++){rr+=s[k]*win[k]*Math.cos(w0*k);ii-=s[k]*win[k]*Math.sin(w0*k);}
+      if(ax==="x"){p.Ax=2*Math.hypot(rr,ii)/(n*cg);p.phx=Math.atan2(ii,rr);}
+      else{p.Ay=2*Math.hypot(rr,ii)/(n*cg);p.phy=Math.atan2(ii,rr);}
+    }
+    p.A=Math.hypot(p.Ax,p.Ay);
+  }
+  FIELD.f0=f0;renderField();
+});
+
+/* ═══════════════ DELAUNAY (Bowyer–Watson) ═══════════════ */
+function delaunay(pts){
+  const P=pts.map(p=>({x:p.x,y:p.y}));
+  let minX=1e18,minY=1e18,maxX=-1e18,maxY=-1e18;
+  for(const p of P){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+    minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);}
+  const d=Math.max(maxX-minX,maxY-minY)*10,mx=(minX+maxX)/2,my=(minY+maxY)/2;
+  const nP=P.length;
+  P.push({x:mx-d,y:my-d/2},{x:mx+d,y:my-d/2},{x:mx,y:my+d});
+  let tris=[[nP,nP+1,nP+2]];
+  const circ=(t,p)=>{
+    const A=P[t[0]],B=P[t[1]],C=P[t[2]];
+    const ax=A.x-p.x,ay=A.y-p.y,bx=B.x-p.x,by=B.y-p.y,cx=C.x-p.x,cy=C.y-p.y;
+    const det=(ax*ax+ay*ay)*(bx*cy-cx*by)-(bx*bx+by*by)*(ax*cy-cx*ay)+(cx*cx+cy*cy)*(ax*by-bx*ay);
+    const orient=(B.x-A.x)*(C.y-A.y)-(C.x-A.x)*(B.y-A.y);
+    return orient>0?det>0:det<0;
+  };
+  for(let i=0;i<nP;i++){
+    const bad=[],edges=[];
+    for(const t of tris)if(circ(t,P[i]))bad.push(t);
+    for(const t of bad)for(let e=0;e<3;e++){
+      const a=t[e],b=t[(e+1)%3];
+      const dup=edges.findIndex(E=>(E[0]===b&&E[1]===a)||(E[0]===a&&E[1]===b));
+      if(dup>=0)edges.splice(dup,1);else edges.push([a,b]);
+    }
+    tris=tris.filter(t=>!bad.includes(t));
+    for(const [a,b] of edges)tris.push([a,b,i]);
+  }
+  return tris.filter(t=>t.every(v=>v<nP));
+}
+function affine(p0,p1,p2,q0,q1,q2){          /* T(p_k)=q_k */
+  const D=p0.x*(p1.y-p2.y)+p1.x*(p2.y-p0.y)+p2.x*(p0.y-p1.y);
+  if(Math.abs(D)<1e-6)return null;
+  const a=(q0.x*(p1.y-p2.y)+q1.x*(p2.y-p0.y)+q2.x*(p0.y-p1.y))/D;
+  const c=(q0.x*(p2.x-p1.x)+q1.x*(p0.x-p2.x)+q2.x*(p1.x-p0.x))/D;
+  const e=(q0.x*(p1.x*p2.y-p2.x*p1.y)+q1.x*(p2.x*p0.y-p0.x*p2.y)+q2.x*(p0.x*p1.y-p1.x*p0.y))/D;
+  const b=(q0.y*(p1.y-p2.y)+q1.y*(p2.y-p0.y)+q2.y*(p0.y-p1.y))/D;
+  const dd=(q0.y*(p2.x-p1.x)+q1.y*(p0.x-p2.x)+q2.y*(p1.x-p0.x))/D;
+  const f=(q0.y*(p1.x*p2.y-p2.x*p1.y)+q1.y*(p2.x*p0.y-p0.x*p2.y)+q2.y*(p0.x*p1.y-p1.x*p0.y))/D;
+  return [a,b,c,dd,e,f];
+}
+
+/* ═══════════════ MOTION REPLAY (ODS animée) ═══════════════ */
+let RP={anim:null,tris:null,nodes:null,bp:null};
+$("rpAlpha").oninput=()=>$("rpAlphaVal").textContent=$("rpAlpha").value;
+function buildReplayMesh(){
+  const sc=v2c();
+  const nodes=FIELD.pts.filter(p=>p.valid).map(p=>({
+    x:p.x*sc,y:p.y*sc,Ax:p.Ax*sc,Ay:p.Ay*sc,phx:p.phx,phy:p.phy,pt:p,fixed:false}));
+  /* ancrages fixes : pourtour élargi de la ROI (déplacement nul) */
+  const r=FIELD.roi,m=Math.max(r.w,r.h)*0.18;
+  const bx0=(r.x-m)*sc,by0=(r.y-m)*sc,bw=(r.w+2*m)*sc,bh=(r.h+2*m)*sc;
+  for(let i=0;i<=6;i++){
+    const f=i/6;
+    for(const [x,y] of [[bx0+f*bw,by0],[bx0+f*bw,by0+bh],[bx0,by0+f*bh],[bx0+bw,by0+f*bh]])
+      nodes.push({x,y,Ax:0,Ay:0,phx:0,phy:0,fixed:true});
+  }
+  RP.nodes=nodes;
+  RP.tris=delaunay(nodes);
+}
+function buildBandpass(){
+  /* option B : FFT → masque f0±Δ → IFFT, par point et par axe */
+  const n=FIELD.n,f0=+$("rpF0").value||FIELD.f0,bw=+$("rpBw").value||1;
+  let N=1;while(N<n)N<<=1;
+  const k0=Math.max(1,Math.round((f0-bw)/FIELD.fps*N)),k1=Math.min(N/2,Math.round((f0+bw)/FIELD.fps*N));
+  RP.bp=new Map();
+  for(const p of FIELD.pts){
+    if(!p.valid)continue;
+    const out={};
+    for(const ax of ["x","y"]){
+      const s=detrend(Array.from(ax==="x"?p.ux:p.uy).map(v=>isFinite(v)?v:0),true);
+      const re=new Float64Array(N),im=new Float64Array(N);
+      for(let i=0;i<n;i++)re[i]=s[i];
+      fft(re,im);
+      for(let k=0;k<=N/2;k++){
+        const keep=k>=k0&&k<=k1;
+        if(!keep){re[k]=im[k]=0;if(k>0&&k<N/2){re[N-k]=im[N-k]=0;}}
+      }
+      /* IFFT via conjugaison */
+      for(let k=0;k<N;k++)im[k]=-im[k];
+      fft(re,im);
+      const sig=new Float32Array(n);
+      for(let i=0;i<n;i++)sig[i]=re[i]/N;
+      out[ax]=sig;
+    }
+    RP.bp.set(p,out);
+  }
+}
+$("rpBtn").onclick=()=>{
+  if(!FIELD)return;
+  if(RP.anim){cancelAnimationFrame(RP.anim);RP.anim=null;$("rpBtn").textContent="▶ Rejouer la déformée";return;}
+  const c=$("replayC");c.width=dispC.width;c.height=dispC.height;
+  buildReplayMesh();
+  const mode=$("rpModeSel").value;
+  if(mode==="bp")buildBandpass();
+  const f0=+$("rpF0").value||FIELD.f0,alpha=()=>+$("rpAlpha").value;
+  const speed=+$("rpSpeed").value,sc=v2c(),start=performance.now();
+  $("rpBtn").textContent="⏸ Stop";
+  const ctx=c.getContext("2d");
+  const loop=now=>{
+    const tau=(now-start)/1000*speed;
+    const a=alpha();
+    /* positions déformées */
+    const q=RP.nodes.map(nd=>{
+      if(nd.fixed)return {x:nd.x,y:nd.y};
+      let dx,dy;
+      if(mode==="ods"){
+        const w=2*Math.PI*f0*tau;
+        dx=a*nd.Ax*Math.cos(w+nd.phx);dy=a*nd.Ay*Math.cos(w+nd.phy);
+      }else{
+        const k=Math.floor(tau*FIELD.fps)%FIELD.n;
+        const bp=RP.bp.get(nd.pt);
+        dx=a*bp.x[k]*sc;dy=a*bp.y[k]*sc;
+      }
+      return {x:nd.x+dx,y:nd.y+dy};
+    });
+    ctx.drawImage(fieldRefFrame,0,0,c.width,c.height);
+    for(const t of RP.tris){
+      const p0=RP.nodes[t[0]],p1=RP.nodes[t[1]],p2=RP.nodes[t[2]];
+      const q0=q[t[0]],q1=q[t[1]],q2=q[t[2]];
+      const M=affine(p0,p1,p2,q0,q1,q2);
+      if(!M)continue;
+      ctx.save();
+      /* clip légèrement dilaté pour masquer les joints */
+      const cx=(q0.x+q1.x+q2.x)/3,cy=(q0.y+q1.y+q2.y)/3,EX=1.012;
+      ctx.beginPath();
+      ctx.moveTo(cx+(q0.x-cx)*EX,cy+(q0.y-cy)*EX);
+      ctx.lineTo(cx+(q1.x-cx)*EX,cy+(q1.y-cy)*EX);
+      ctx.lineTo(cx+(q2.x-cx)*EX,cy+(q2.y-cy)*EX);
+      ctx.closePath();ctx.clip();
+      ctx.transform(M[0],M[1],M[2],M[3],M[4],M[5]);
+      ctx.drawImage(fieldRefFrame,0,0,c.width,c.height);
+      ctx.restore();
+    }
+    ctx.fillStyle="#FFB454";ctx.font="11px Arial";
+    ctx.fillText(`×${a} · ${fmtF(f0,2)} Hz · ${mode==="ods"?"ODS":"bande ±"+$("rpBw").value+" Hz"} · ${$("rpSpeed").value}×`,10,18);
+    RP.anim=requestAnimationFrame(loop);
+  };
+  RP.anim=requestAnimationFrame(loop);
+};
+
+
 const EV={r1:null,r2:null,gw:0,gh:0,lastT:0,cv:document.createElement("canvas")};
 function evReset(){EV.r1=null;EV.lastT=0;}
 ["evFl","evFh","evAlpha"].forEach(id=>$(id).addEventListener("input",()=>{
@@ -1267,7 +1784,7 @@ $("themeBtn").onclick=()=>{
   if(S.res)postProcessAndShow();
 };
 const PARAM_IDS=["fpsIn","t0In","t1In","methodSel","searchIn","corrIn","smoothIn","hpIn","lpIn",
-  "winSel","axisSel","vminIn","unitSel","qtySel","scaleSel","fmaxIn","accUnitSel","calMm","mapF0In","evFl","evFh"];
+  "winSel","axisSel","vminIn","unitSel","qtySel","scaleSel","fmaxIn","accUnitSel","calMm","mapF0In","evFl","evFh","fpNpts","rpBw"];
 function saveParams(){
   const o={};for(const id of PARAM_IDS)o[id]=$(id).value;
   for(const id of["demeanChk","detrendChk","subpxChk","interpChk"])o[id]=$(id).checked;

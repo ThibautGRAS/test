@@ -1,23 +1,14 @@
 {
  "maj": "2026-07-21",
- "source": "presse spécialisée (Maxifoot, Foot Mercato, Morning Foot, CulturePSG), juillet 2026",
- "note": "Ajustements volontairement modérés (±0,03 à ±0,08 sur l'échelle log des forces). Le mercato est ouvert jusqu'au 1er septembre : signaux susceptibles d'évoluer. Coupe du monde achevée le 19 juillet — retours tardifs d'internationaux possibles en début de saison.",
+ "source": "presse spécialisée (Maxifoot, Foot Mercato, L1.com, Lensois.com, Le Petit Lillois, Wikipédia), juillet 2026",
+ "note": "Ajustements modérés (±0,03 à ±0,08 sur l'échelle log des forces), sourcés ci-dessous. Mercato ouvert jusqu'au 1er septembre : signaux susceptibles d'évoluer. Coupe du monde achevée le 19 juillet — retours tardifs d'internationaux en début de saison.",
  "equipes": {
-  "Marseille": {
-   "att": -0.08,
-   "def": 0.0,
-   "titres": [
-    "Greenwood transféré à Fenerbahçe",
-    "Aubameyang vendu au Deportivo La Corogne",
-    "Traoré (Genoa) arrive en prêt avec option d'achat"
-   ]
-  },
   "Paris SG": {
    "att": -0.03,
    "def": 0.0,
    "titres": [
-    "Champion et double vainqueur de C1 — effectif dominant conservé",
-    "Ventes de Gonçalo Ramos (record) et Lee, départ Kolo Muani attendu",
+    "Champion 2025-26 (76 pts) et double vainqueur de C1 — effectif dominant",
+    "Gonçalo Ramos vendu au Milan AC, départ Kolo Muani attendu, aucune arrivée au 21/07",
     "Piste Akliouche (Monaco) pour compenser"
    ]
   },
@@ -25,8 +16,62 @@
    "att": 0.0,
    "def": 0.03,
    "titres": [
-    "Dauphin surprise 2025-26, a contesté le titre au PSG",
-    "Nawrocki (Celtic) renforce la défense, Skoras arrive"
+    "Dauphin 2025-26 (70 pts), série de 8 victoires — a contesté le titre au PSG",
+    "Nawrocki (Celtic), Cuisance et Abdulhamid renforcent l'équipe",
+    "Qualifié en Ligue des champions : calendrier plus chargé"
+   ]
+  },
+  "Lille": {
+   "att": 0.0,
+   "def": 0.0,
+   "titres": [
+    "3e en 2025-26, plus longue série d'invincibilité (13 matchs)",
+    "Kouassi (Séville) seule arrivée, mercato attentiste",
+    "Qualifié en Ligue des champions"
+   ]
+  },
+  "Lyon": {
+   "att": -0.05,
+   "def": 0.0,
+   "titres": [
+    "4e en 2025-26 et retour en C1, mais situation financière délicate",
+    "Afonso Moreira vendu à Leverkusen (29,5 M€), Tottenham à l'assaut de Fofana",
+    "Retour d'Endrick (prêt) incertain après le Mondial"
+   ]
+  },
+  "Marseille": {
+   "att": -0.06,
+   "def": 0.0,
+   "titres": [
+    "Greenwood transféré à Fenerbahçe (39 M€), Aubameyang vendu à La Corogne",
+    "Weah, Medina et Traoré définitivement conservés (options levées)",
+    "Europa League au programme"
+   ]
+  },
+  "Monaco": {
+   "att": 0.03,
+   "def": 0.0,
+   "titres": [
+    "Ansu Fati conservé (option levée), Nazinho et Detourbet arrivent",
+    "Akliouche courtisé par le PSG — dossier chaud du mercato"
+   ]
+  },
+  "Rennes": {
+   "att": 0.0,
+   "def": -0.04,
+   "titres": [
+    "Jacquet vendu à Liverpool (63,6 M€) — grosse perte défensive",
+    "Recrutement estival le plus actif de L1 (Reynolds…), Lepaul (21 buts) conservé",
+    "Europa League au programme"
+   ]
+  },
+  "Strasbourg": {
+   "att": 0.0,
+   "def": 0.0,
+   "titres": [
+    "Demi-finaliste de Ligue Conférence 2025-26 (1er de la phase de ligue)",
+    "Aucune Coupe d'Europe cette saison : effectif pléthorique, dégraissage attendu",
+    "Multipropriété Chelsea : échanges de joueurs fréquents"
    ]
   },
   "Paris FC": {
@@ -34,7 +79,7 @@
    "def": 0.0,
    "titres": [
     "Pagis recruté 15 M€ (Lorient), Cafaro (Nantes) et Mbemba (PSG) arrivent",
-    "Projet investisseur ambitieux confirmé"
+    "Projet investisseur ambitieux, Kombouaré sur le banc depuis février"
    ]
   },
   "Lorient": {
@@ -42,6 +87,14 @@
    "def": 0.0,
    "titres": [
     "Pagis, meilleur atout offensif, vendu au Paris FC"
+   ]
+  },
+  "Nice": {
+   "att": 0.0,
+   "def": -0.03,
+   "titres": [
+    "Maintien arraché en barrage face à Saint-Étienne",
+    "Saison 2025-26 très difficile : 6 défaites d'affilée, entraîneur limogé en décembre"
    ]
   },
   "Troyes": {
@@ -58,14 +111,7 @@
    "titres": [
     "Plus petit budget de L1 (~25 M€), deux montées consécutives",
     "Feu vert DNCG sans restriction, fonds Outfield au capital",
-    "Risque de descente assumé publiquement"
-   ]
-  },
-  "Nice": {
-   "att": 0.0,
-   "def": -0.03,
-   "titres": [
-    "Maintien arraché en barrage face à Saint-Étienne — saison 2025-26 très difficile"
+    "Risque de descente assumé publiquement, aucune arrivée au 21/07"
    ]
   }
  }

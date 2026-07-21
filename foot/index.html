@@ -93,6 +93,25 @@ summary::marker{color:var(--amber)}
 .hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.45}
 .chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px}
 .chk input{width:18px;height:18px;accent-color:var(--amber)}
+.toggle{
+  display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;padding:10px 12px;
+  border:1px solid var(--edge);border-radius:10px;background:var(--pitch2);color:var(--muted);
+  font-family:inherit;font-size:12px;text-align:left;cursor:pointer;
+}
+.toggle .knob{
+  flex:0 0 auto;width:38px;height:22px;border-radius:11px;background:#1A3626;position:relative;
+  border:1px solid var(--edge);transition:background .15s;
+}
+.toggle .knob::after{
+  content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;
+  background:var(--muted);transition:transform .15s, background .15s;
+}
+.toggle.on{color:var(--line)}
+.toggle.on .knob{background:rgba(255,194,75,.35)}
+.toggle.on .knob::after{transform:translateX(16px);background:var(--amber)}
+.mcom{grid-column:1 / -1;font-size:9.5px;color:var(--muted);line-height:1.45;margin-top:5px;
+  border-top:1px dashed rgba(30,64,48,.8);padding-top:5px}
+.mcom b{color:var(--line);font-weight:700}
 button.go{
   width:100%;margin-top:12px;padding:13px;border:none;border-radius:10px;cursor:pointer;
   font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:1px;
@@ -105,12 +124,11 @@ button.go:active{transform:translateY(1px)}
   background:linear-gradient(180deg,#0A130E,#0E1F15);border:1px solid var(--edge);
   border-radius:12px;padding:14px 10px;margin-bottom:12px;
 }
-.scoreline .t{font-size:13px;font-weight:700;text-align:center;line-height:1.25}
+.scoreline .t{font-size:13px;font-weight:700;text-align:center;line-height:1.25;min-width:0}
 .scoreline .t small{display:block;font-weight:400;font-size:9.5px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-top:3px}
-.digits{font-family:'Archivo Black',sans-serif;font-size:46px;letter-spacing:2px;color:var(--amber);
-  text-shadow:0 0 22px rgba(255,194,75,.35);font-variant-numeric:tabular-nums;white-space:nowrap}
-.digits .p{display:block;text-align:center;font-family:'Archivo',sans-serif;font-size:10.5px;
-  color:var(--muted);letter-spacing:1px;text-shadow:none;margin-top:2px}
+.digits{font-family:'Archivo Black',sans-serif;font-size:clamp(30px,10vw,44px);letter-spacing:2px;color:var(--amber);
+  text-shadow:0 0 22px rgba(255,194,75,.35);font-variant-numeric:tabular-nums;white-space:nowrap;display:block;text-align:center}
+.scorep{display:block;text-align:center;font-size:10.5px;color:var(--muted);letter-spacing:1px;margin-top:2px}
 .bar{display:flex;height:34px;border-radius:9px;overflow:hidden;border:1px solid var(--edge);margin-bottom:6px}
 .bar div{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;min-width:0;overflow:hidden;white-space:nowrap}
 .bar .h{background:#2E6B44}.bar .d{background:#41412B}.bar .a{background:#5A2F2A}
@@ -183,8 +201,8 @@ footer{font-size:10px;color:var(--muted);line-height:1.5;margin-top:16px}
       <button id="swap" title="Inverser" aria-label="Inverser domicile et extérieur">⇅</button>
       <div><label for="away">Extérieur</label><select id="away"></select></div>
     </div>
-    <div class="chk"><input type="checkbox" id="usenews" checked>
-      <label for="usenews" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px">Intégrer le signal actu (mercato, forme, contexte)</label></div>
+    <button type="button" id="usenews" class="toggle on" aria-pressed="true">
+      <span class="knob"></span>Signal actu intégré (mercato, contexte, faits de jeu)</button>
     <details>
       <summary>Cotes 1N2 du match (optionnel — améliore la calibration)</summary>
       <div class="opt-row">
@@ -203,9 +221,10 @@ footer{font-size:10px;color:var(--muted);line-height:1.5;margin-top:16px}
   <div id="board">
     <div class="scoreline">
       <div class="t" id="bh"></div>
-      <div><span class="digits" id="score"></span><span class="p digits" id="scorep"></span></div>
+      <div style="min-width:0"><span class="digits" id="score"></span><span class="scorep" id="scorep"></span></div>
       <div class="t" id="ba"></div>
     </div>
+    <div class="card" style="padding:10px 12px"><div class="mcom" id="scom" style="font-size:11.5px;line-height:1.5;color:var(--line)"></div></div>
     <div class="bar"><div class="h" id="ph"></div><div class="d" id="pd"></div><div class="a" id="pa"></div></div>
     <div class="legend"><span>victoire domicile</span><span>nul</span><span>victoire extérieur</span></div>
     <div class="card">
@@ -276,6 +295,64 @@ function softmax(z){
 }
 function newsAdj(t){
   return (NEWS && NEWS.equipes[t]) || {att:0, def:0};
+}
+
+/* Rangs des équipes actives (attaque, défense, Elo) pour les commentaires */
+let RANKS = null;
+function buildRanks(){
+  const act = Object.keys(M.equipes).filter(t => M.equipes[t].actif);
+  const rk = key => {
+    const sorted = [...act].sort((x,y) =>
+      (M.equipes[y][key]+newsAdj(y)[key==='attaque'?'att':'def']) -
+      (M.equipes[x][key]+newsAdj(x)[key==='attaque'?'att':'def']));
+    return Object.fromEntries(sorted.map((t,i)=>[t,i+1]));
+  };
+  const eloSorted = [...act].sort((x,y)=>M.equipes[y].elo-M.equipes[x].elo);
+  RANKS = {att: rk('attaque'), def: rk('defense'),
+           elo: Object.fromEntries(eloSorted.map((t,i)=>[t,i+1])), n: act.length};
+}
+const ord = r => r===1 ? '1re' : r+'e';
+
+/* Commentaire justifiant le score prédit */
+function comment(h, a, P, opts){
+  const o = opts||{}, pb=P.pb, cls=pb.indexOf(Math.max(...pb));
+  const th=M.equipes[h], ta=M.equipes[a];
+  const dElo = Math.round(th.elo + M.meta.elo_home - ta.elo);
+  const fav = cls===0 ? h : (cls===2 ? a : null);
+  const out = [];
+  if(fav){
+    const und = fav===h ? a : h;
+    const gap = Math.abs(dElo);
+    const favGap = fav===h ? dElo : -dElo;
+    const q = gap>200 ? 'très net' : gap>100 ? 'net' : 'léger';
+    let s = '<b>'+fav+'</b> part avec un avantage '+q+' (Elo +'+favGap+
+            ' en sa faveur, terrain compris)';
+    const atouts = [];
+    if(RANKS.att[fav]<=4) atouts.push(ord(RANKS.att[fav])+' attaque');
+    if(RANKS.def[fav]<=4) atouts.push(ord(RANKS.def[fav])+' défense');
+    if(atouts.length) s += ', porté par la '+atouts.join(' et la ')+' du plateau (10 saisons pondérées)';
+    s += fav===h ? '.' : ' — suffisant même à l\'extérieur.';
+    out.push(s);
+    if(M.equipes[und].promu) out.push(und+', promu, manque de références à ce niveau.');
+  } else {
+    out.push('Forces très proches (ΔElo '+(dElo>0?'+':'')+dElo+
+      ', domicile inclus) : le nul est l\'issue la plus crédible, '+
+      'mais '+(pb[0]>pb[2]?h:a)+' garde un léger ascendant.');
+  }
+  const tot = P.lam + P.mu;
+  out.push(tot>3.1 ? 'Match ouvert attendu ('+tot.toFixed(1)+' buts espérés).' :
+           tot<2.3 ? 'Rencontre verrouillée en vue ('+tot.toFixed(1)+' buts espérés).' :
+           'Total de buts attendu : '+tot.toFixed(1)+'.');
+  if(o.rh && o.ra && Math.abs(o.rh-o.ra)>=3)
+    out.push('Avantage fraîcheur : '+(o.rh>o.ra?h:a)+' ('+Math.max(o.rh,o.ra)+' j de repos contre '+Math.min(o.rh,o.ra)+').');
+  if(NEWS && o.news !== false){
+    [h,a].forEach(t => {
+      const e = NEWS.equipes[t];
+      if(e && e.titres.length && (e.att!==0 || e.def!==0))
+        out.push('📰 '+t+' : '+e.titres[0]+'.');
+    });
+  }
+  return out.join(' ');
 }
 
 /* Prédiction centrale : matrice + 1N2 calibré. odds/rest optionnels. */
@@ -370,6 +447,7 @@ function showJournee(j){
       '<div class="mt r">'+ba+f.a+'<small>'+(M.equipes[f.a].promu?'promu · ':'')+'Elo '+M.equipes[f.a].elo.toFixed(0)+'</small></div>'+
       '<div class="mbar"><div class="h" style="flex:'+p.pb[0]+'"></div><div class="d" style="flex:'+p.pb[1]+'"></div><div class="a" style="flex:'+p.pb[2]+'"></div></div>'+
       '<div class="mpct"><span>1 '+pct(p.pb[0])+'</span><span>N '+pct(p.pb[1])+'</span><span>2 '+pct(p.pb[2])+'</span></div>'+
+      '<div class="mcom">'+comment(f.h, f.a, p, {rh:f.rh, ra:f.ra})+'</div>'+
       '</div>';
   }).join('');
   $('jlist').querySelectorAll('.match').forEach(el =>
@@ -386,10 +464,13 @@ function showJournee(j){
 function predict(){
   const h=$('home').value, a=$('away').value;
   if(h===a){ alert('Choisis deux équipes différentes.'); return; }
-  const p = computeMatch(h, a, {news: $('usenews').checked,
+  const useNews = $('usenews').classList.contains('on');
+  const p = computeMatch(h, a, {news: useNews,
     oh:+$('oh').value, od:+$('od').value, oa:+$('oa').value,
     rh:+$('rh').value||7, ra:+$('ra').value||7});
   render(h, a, p);
+  $('scom').innerHTML = comment(h, a, p,
+    {rh:+$('rh').value||7, ra:+$('ra').value||7, news: useNews});
 }
 function render(h, a, P){
   const {X, pb, lam, mu, bi, bj, bp, n} = P;
@@ -476,10 +557,17 @@ Promise.all([
   $('home').value = 'Paris SG'; $('away').value = 'Marseille';
   $('meta').innerHTML = m.meta.n_matchs+' matchs · '+m.meta.saisons.length+' saisons<br>maj '+
     m.meta.derniere_date+' · actu '+(nw?nw.maj:'—');
+  buildRanks();
   buildJournees();
   fillModelView();
 }).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });
 
+$('usenews').addEventListener('click', () => {
+  const b = $('usenews'), on = !b.classList.contains('on');
+  b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+  buildRanks();
+  if($('board').style.display==='block') predict();
+});
 $('go').addEventListener('click', predict);
 $('swap').addEventListener('click', () => {
   const h=$('home').value; $('home').value=$('away').value; $('away').value=h;

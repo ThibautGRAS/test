@@ -64,3 +64,10 @@ BTTS) à partir du seul `model.json`.
   vs 25,2 % réels ; auparavant 0,3 %).
 - **Validation** : distribution des totaux de buts modèle vs réel (backtest 911 matchs),
   filtrable par équipe — 3 buts : 21,6 % prédit vs 21,5 % observé.
+
+## v3.1 — Optimisation étagée (`optimize.py`)
+- Recherche par étages sur le backtest 2023-26 : poids tirs cadrés (0,15 optimal,
+  0,30 dégrade le hit@1), avantage domicile par équipe (retiré — aucun gain),
+  décroissance xi=0,001 confirmée, règle d'affichage à marge de nul 0,16 optimale
+  en hit@1 (12,07 %) ET en réalisme (29 % de nuls affichés vs 25 % réels).
+- Métrique « score exact » du pipeline alignée sur la règle de production.

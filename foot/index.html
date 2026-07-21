@@ -112,6 +112,15 @@ summary::marker{color:var(--amber)}
 .mcom{grid-column:1 / -1;font-size:9.5px;color:var(--muted);line-height:1.45;margin-top:5px;
   border-top:1px dashed rgba(30,64,48,.8);padding-top:5px}
 .mcom b{color:var(--line);font-weight:700}
+.mchaos{grid-column:1 / -1;font-size:9.5px;color:var(--flare);margin-top:3px;font-variant-numeric:tabular-nums}
+.gbar{display:grid;grid-template-columns:78px 1fr 38px;gap:7px;align-items:center;
+  padding:3.5px 0;font-size:11px}
+.gbar .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.gbar .tr{height:13px;background:var(--pitch2);border:1px solid var(--edge);border-radius:7px;overflow:hidden}
+.gbar .fl{height:100%;background:linear-gradient(90deg,#7a5a1e,var(--amber));border-radius:7px;
+  transition:width .35s ease}
+.gbar .vl{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.gbar.neg .fl{background:linear-gradient(90deg,#6b2f28,var(--bad))}
 button.go{
   width:100%;margin-top:12px;padding:13px;border:none;border-radius:10px;cursor:pointer;
   font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:1px;
@@ -177,7 +186,7 @@ footer{font-size:10px;color:var(--muted);line-height:1.5;margin-top:16px}
 <nav>
   <button id="nav-j" class="on">26-27</button>
   <button id="nav-s">Simu</button>
-  <button id="nav-c">Classement</button>
+  <button id="nav-c">Clubs</button>
   <button id="nav-m">Modèle</button>
 </nav>
 
@@ -250,6 +259,12 @@ footer{font-size:10px;color:var(--muted);line-height:1.5;margin-top:16px}
 
 <!-- ============ VUE CLASSEMENT PROJETÉ ============ -->
 <div class="view" id="view-c">
+  <div class="card">
+    <h2>Comparateur de clubs — critère au choix</h2>
+    <div class="jchips" id="critchips"></div>
+    <div id="critgraph"></div>
+    <div class="hint" id="crithint"></div>
+  </div>
   <div class="card">
     <h2>Classement final projeté — 5 000 saisons simulées</h2>
     <table class="bt" id="proj"></table>
@@ -413,6 +428,14 @@ function computeMatch(h, a, opts){
   return {X, pb, lam, mu, bi, bj, bp, n};
 }
 
+function chaosLine(h, a, P){
+  const c = chaosIndex(h, a, P.pb);
+  if(c < CHAOS_SEUIL) return '';
+  const sp = surprise(h, a, P);
+  return '<div class="mchaos">⚡ Match piégeux (chaos '+chaosDisp(c)+
+    '/100) — scénario surprise : '+sp.bi+'–'+sp.bj+' ('+pct(sp.bp)+')</div>';
+}
+
 /* ---------- vue journées ---------- */
 function buildJournees(){
   const rest = {}, byJ = {};
@@ -465,6 +488,7 @@ function showJournee(j){
       '<div class="mbar"><div class="h" style="flex:'+p.pb[0]+'"></div><div class="d" style="flex:'+p.pb[1]+'"></div><div class="a" style="flex:'+p.pb[2]+'"></div></div>'+
       '<div class="mpct"><span>1 '+pct(p.pb[0])+'</span><span>N '+pct(p.pb[1])+'</span><span>2 '+pct(p.pb[2])+'</span></div>'+
       '<div class="mcom">'+comment(f.h, f.a, p, {rh:f.rh, ra:f.ra})+'</div>'+
+      chaosLine(f.h, f.a, p)+
       '</div>';
   }).join('');
   $('jlist').querySelectorAll('.match').forEach(el =>
@@ -486,8 +510,12 @@ function predict(){
     oh:+$('oh').value, od:+$('od').value, oa:+$('oa').value,
     rh:+$('rh').value||7, ra:+$('ra').value||7});
   render(h, a, p);
+  const cx = chaosIndex(h, a, p.pb), sp = surprise(h, a, p);
   $('scom').innerHTML = comment(h, a, p,
-    {rh:+$('rh').value||7, ra:+$('ra').value||7, news: useNews});
+    {rh:+$('rh').value||7, ra:+$('ra').value||7, news: useNews}) +
+    '<div class="mchaos" style="margin-top:6px">⚡ Indice chaos : '+chaosDisp(cx)+
+    '/100'+(cx>=CHAOS_SEUIL?' — match piégeux':'')+' · scénario surprise : '+
+    sp.bi+'–'+sp.bj+' ('+pct(sp.bp)+')</div>';
 }
 function render(h, a, P){
   const {X, pb, lam, mu, bi, bj, bp, n} = P;
@@ -527,6 +555,80 @@ function render(h, a, P){
     top5.map(([i,j,p]) => '<div><span class="sc">'+i+' – '+j+'</span><span>'+pct(p)+'</span></div>').join('');
   const b=$('board'); b.style.display='block';
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+}
+
+/* ---------- indice de chaos & scénario surprise ---------- */
+/* Le foot, c'est aussi le hasard : quand l'issue est ouverte ET que les deux
+   équipes sont irrégulières, l'upset devient un scénario crédible. Indice =
+   55% entropie du 1N2 calibré + 45% irrégularité moyenne des deux clubs. */
+function chaosIndex(h, a, pb){
+  const H = -pb.reduce((s,p)=>s+(p>0?p*Math.log(p):0),0)/Math.log(3);
+  const irr = 1 - (M.equipes[h].regularite + M.equipes[a].regularite)/2;
+  return 0.55*H + 0.45*irr;
+}
+function surprise(h, a, P){
+  const cls = P.pb.indexOf(Math.max(...P.pb));
+  const target = cls===0 ? 2 : (cls===2 ? 0 : (P.pb[0]<P.pb[2] ? 0 : 2)); // l'upset
+  let bi=0,bj=0,bp=0;
+  for(let i=0;i<=P.n;i++) for(let j=0;j<=P.n;j++){
+    const c = i>j?0:(i===j?1:2);
+    if(c===target && P.X[i][j]>bp){ bp=P.X[i][j]; bi=i; bj=j; }
+  }
+  return {bi,bj,bp};
+}
+const CHAOS_SEUIL = 0.84;   // ~30% des matchs du calendrier
+// affichage 0-100 rééchelonné : 0.55 (verrouillé) -> 1.0 (chaos total)
+const chaosDisp = c => Math.round(100*Math.max(0, Math.min(1, (c-0.55)/0.45)));
+
+/* ---------- comparateur de clubs ---------- */
+const CRITERES = [
+ {id:'perf', nom:'Performance', hint:'Force globale du modèle : attaque + défense estimées sur 10 saisons pondérées, signal actu inclus.'},
+ {id:'att',  nom:'Attaque',     hint:'Rating offensif Dixon-Coles (buts espérés marqués), actu incluse.'},
+ {id:'def',  nom:'Défense',     hint:'Rating défensif Dixon-Coles (buts espérés encaissés), actu incluse.'},
+ {id:'forme',nom:'Forme',       hint:'Points par match sur les 5 dernières rencontres de 2025-26.'},
+ {id:'reg',  nom:'Régularité',  hint:'Constance des résultats en 2025-26 (écart-type des points par match, inversé). Une équipe irrégulière alimente l\'indice de chaos.'},
+ {id:'actu', nom:'Impact actu', hint:'Somme des ajustements attaque+défense issus du signal actu (mercato, contexte). 50 = neutre.'}
+];
+let curCrit = 'perf';
+function critVal(t, id){
+  const e = M.equipes[t], na = newsAdj(t);
+  switch(id){
+    case 'perf': return e.attaque + na.att + e.defense + na.def;
+    case 'att':  return e.attaque + na.att;
+    case 'def':  return e.defense + na.def;
+    case 'forme':return e.forme5;
+    case 'reg':  return e.regularite;
+    case 'actu': return na.att + na.def;
+  }
+}
+function drawCrit(){
+  const act = Object.keys(M.equipes).filter(t=>M.equipes[t].actif);
+  const vals = act.map(t => ({t, v: critVal(t, curCrit)})).sort((a,b)=>b.v-a.v);
+  let lo = Math.min(...vals.map(x=>x.v)), hi = Math.max(...vals.map(x=>x.v));
+  if(curCrit==='actu'){ const m = Math.max(Math.abs(lo), Math.abs(hi), 0.01); lo=-m; hi=m; }
+  const span = (hi-lo)||1;
+  $('critgraph').innerHTML = vals.map(({t,v}) => {
+    const pctW = Math.max(4, 100*(v-lo)/span);
+    const disp = curCrit==='actu' ? Math.round(50+50*v/((hi)||1)) : Math.round(100*(v-lo)/span);
+    const neg = curCrit==='actu' && v<0 ? ' neg' : '';
+    return '<div class="gbar'+neg+'"><span class="nm">'+t+
+      (M.equipes[t].promu?' <span class="badge">P</span>':'')+'</span>'+
+      '<span class="tr"><span class="fl" style="width:'+pctW+'%"></span></span>'+
+      '<span class="vl">'+disp+'</span></div>';
+  }).join('');
+  $('crithint').textContent = CRITERES.find(c=>c.id===curCrit).hint + ' Échelle relative 0-100 sur le plateau 2026-27.';
+}
+function buildCrit(){
+  $('critchips').innerHTML = CRITERES.map(c =>
+    '<button data-c="'+c.id+'"'+(c.id===curCrit?' class="on"':'')+'>'+c.nom+'</button>').join('');
+  $('critchips').addEventListener('click', e => {
+    if(!e.target.dataset.c) return;
+    curCrit = e.target.dataset.c;
+    document.querySelectorAll('#critchips button').forEach(b =>
+      b.classList.toggle('on', b.dataset.c===curCrit));
+    drawCrit();
+  });
+  drawCrit();
 }
 
 /* ---------- classement projeté (Monte-Carlo) ---------- */
@@ -634,6 +736,7 @@ Promise.all([
     m.meta.derniere_date+' · actu '+(nw?nw.maj:'—');
   buildRanks();
   buildJournees();
+  buildCrit();
   fillModelView();
   setTimeout(fillProjection, 50);
 }).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });

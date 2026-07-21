@@ -1,6 +1,6 @@
 {
  "meta": {
-  "genere": "2026-07-21 19:37 UTC",
+  "genere": "2026-07-21 22:03 UTC",
   "n_matchs": 3476,
   "saisons": [
    "1617",
@@ -18,8 +18,7 @@
   "xi": 0.001,
   "demi_vie_jours": 693,
   "elo_home": 60.0,
-  "max_goals": 8,
-  "saison_cible": "2026-27"
+  "max_goals": 8
  },
  "gamma": 0.20369461057728808,
  "rho": -0.0440858288917294,
@@ -463,5 +462,165 @@
   },
   "score_exact_pct": 11.86,
   "n_matchs_eval": 911
+ },
+ "validation": {
+  "saisons": {
+   "2324": {
+    "dc": {
+     "logloss": 1.0338,
+     "acc": 0.4851
+    },
+    "blend": {
+     "logloss": 1.0221,
+     "acc": 0.4785
+    },
+    "marche": {
+     "logloss": 1.0109,
+     "acc": 0.5116
+    },
+    "score_exact_pct": 13.2,
+    "n": 303,
+    "simulation": {
+     "mae_pts": 7.6,
+     "spearman": 0.643,
+     "champion_predit": "Paris SG",
+     "champion_reel": "Paris SG",
+     "rates": [
+      {
+       "club": "Brest",
+       "predit": 14,
+       "reel": 3
+      },
+      {
+       "club": "Rennes",
+       "predit": 2,
+       "reel": 10
+      },
+      {
+       "club": "Le Havre",
+       "predit": 9,
+       "reel": 15
+      }
+     ],
+     "reussites": [
+      {
+       "club": "Paris SG",
+       "predit": 1,
+       "reel": 1
+      }
+     ]
+    }
+   },
+   "2425": {
+    "dc": {
+     "logloss": 0.9744,
+     "acc": 0.5523
+    },
+    "blend": {
+     "logloss": 0.9849,
+     "acc": 0.5425
+    },
+    "marche": {
+     "logloss": 0.9584,
+     "acc": 0.5392
+    },
+    "score_exact_pct": 10.1,
+    "n": 306,
+    "simulation": {
+     "mae_pts": 8.3,
+     "spearman": 0.672,
+     "champion_predit": "Paris SG",
+     "champion_reel": "Paris SG",
+     "rates": [
+      {
+       "club": "Rennes",
+       "predit": 3,
+       "reel": 12
+      },
+      {
+       "club": "Auxerre",
+       "predit": 18,
+       "reel": 10
+      },
+      {
+       "club": "Montpellier",
+       "predit": 10,
+       "reel": 18
+      }
+     ],
+     "reussites": [
+      {
+       "club": "Brest",
+       "predit": 9,
+       "reel": 9
+      },
+      {
+       "club": "Lille",
+       "predit": 4,
+       "reel": 4
+      },
+      {
+       "club": "Paris SG",
+       "predit": 1,
+       "reel": 1
+      }
+     ]
+    }
+   },
+   "2526": {
+    "dc": {
+     "logloss": 0.9944,
+     "acc": 0.5298
+    },
+    "blend": {
+     "logloss": 0.9824,
+     "acc": 0.543
+    },
+    "marche": {
+     "logloss": 0.9749,
+     "acc": 0.5397
+    },
+    "score_exact_pct": 12.3,
+    "n": 302,
+    "simulation": {
+     "mae_pts": 7.4,
+     "spearman": 0.738,
+     "champion_predit": "Paris SG",
+     "champion_reel": "Paris SG",
+     "rates": [
+      {
+       "club": "Nice",
+       "predit": 6,
+       "reel": 16
+      },
+      {
+       "club": "Lens",
+       "predit": 8,
+       "reel": 2
+      },
+      {
+       "club": "Lorient",
+       "predit": 15,
+       "reel": 9
+      }
+     ],
+     "reussites": [
+      {
+       "club": "Paris SG",
+       "predit": 1,
+       "reel": 1
+      }
+     ]
+    }
+   }
+  },
+  "chaos": {
+   "logloss_irr_basse": 0.943,
+   "logloss_irr_haute": 0.999,
+   "favori_battu_irr_basse_pct": 21.5,
+   "favori_battu_irr_haute_pct": 24.4,
+   "n_par_tiers": 303,
+   "lecture": "tiers bas vs haut d'irrégularité (constance des points saison précédente)"
+  }
  }
 }

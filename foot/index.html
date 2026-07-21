@@ -315,9 +315,11 @@ function fillValidation(){
     'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
     'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
     '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
-    '1) <s>Ratings sur tirs cadrés</s> et 2) <s>avantage domicile par équipe</s> : intégrés (v3) — '+
-    'gain net de log-loss (0,9964 → 0,9953) et de corrélation des rangs, au prix d\'un léger '+
-    'recul du score exact (11,9 → 10,7 %), la fusion lissant les buts espérés. '+
+    '1) <s>Ratings sur tirs cadrés</s> : intégrés à poids 0,15, optimisé par backtest étagé '+
+    '(optimize.py) — au-delà, le hit score exact se dégrade. 2) <s>Avantage domicile par '+
+    'équipe</s> : testé puis retiré — aucun gain mesurable sur 911 matchs, le modèle simple '+
+    'gagne. La règle d\'affichage à marge de nul 0,16 s\'est révélée optimale à la fois en '+
+    'réalisme et en précision (hit@1 12,1 % vs 11,3 % pour l\'argmax global). '+
     '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
     'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
     'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+
@@ -1005,9 +1007,11 @@ function fillValidation(){
     'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
     'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
     '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
-    '1) <s>Ratings sur tirs cadrés</s> et 2) <s>avantage domicile par équipe</s> : intégrés (v3) — '+
-    'gain net de log-loss (0,9964 → 0,9953) et de corrélation des rangs, au prix d\'un léger '+
-    'recul du score exact (11,9 → 10,7 %), la fusion lissant les buts espérés. '+
+    '1) <s>Ratings sur tirs cadrés</s> : intégrés à poids 0,15, optimisé par backtest étagé '+
+    '(optimize.py) — au-delà, le hit score exact se dégrade. 2) <s>Avantage domicile par '+
+    'équipe</s> : testé puis retiré — aucun gain mesurable sur 911 matchs, le modèle simple '+
+    'gagne. La règle d\'affichage à marge de nul 0,16 s\'est révélée optimale à la fois en '+
+    'réalisme et en précision (hit@1 12,1 % vs 11,3 % pour l\'argmax global). '+
     '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
     'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
     'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+

@@ -28,3 +28,10 @@ BTTS) à partir du seul `model.json`.
   Mis à jour à la demande via Claude — le réentraînement hebdo ne l'écrase pas.
 - Le Mans (sans historique L1 récent) reçoit un prior de promu ; `train.py` le
   régénère automatiquement tant que l'équipe est au calendrier.
+
+## v2.2 — Classement projeté & contexte structurel
+- **Onglet Classement** : 5 000 saisons simulées par Monte-Carlo (tirage des scores dans
+  les matrices calibrées, départage points > diff > buts) → xPts, proba de titre,
+  Top 4 (C1), relégation. PRNG xorshift déterministe.
+- **Contexte structurel** dans `news.json` : Coupe d'Europe 2026-27 et ancienneté du banc
+  par club, injectés dans les commentaires (« banc récent », « enchaîne avec la C1 »).

@@ -373,6 +373,23 @@ def run(local_dir):
         for t, e in model["equipes"].items():
             e["actif"] = t in fixture_teams
             e["promu"] = bool(t in fixture_teams and t not in prev)
+    # régularité (constance des points, dernière saison) et volatilité (écart de buts)
+    last = m[m.Season == m.Season.max()]
+    pts_l, gd_l = {}, {}
+    for _, r in last.iterrows():
+        ph = 3 if r.FTHG > r.FTAG else (1 if r.FTHG == r.FTAG else 0)
+        pa = 3 if r.FTAG > r.FTHG else (1 if r.FTHG == r.FTAG else 0)
+        pts_l.setdefault(r.HomeTeam, []).append(ph); pts_l.setdefault(r.AwayTeam, []).append(pa)
+        gd_l.setdefault(r.HomeTeam, []).append(r.FTHG - r.FTAG)
+        gd_l.setdefault(r.AwayTeam, []).append(r.FTAG - r.FTHG)
+    stdp = {t: float(np.std(v)) for t, v in pts_l.items()}
+    ref_reg = sorted(stdp.get(t, None) for t in cur_teams if stdp.get(t) is not None)
+    p75 = ref_reg[int(0.75 * len(ref_reg))]
+    lo_r, hi_r = min(ref_reg), max(ref_reg)
+    for t, e in model["equipes"].items():
+        v = stdp.get(t, p75)
+        e["volatilite"] = round(float(np.std(gd_l[t])) if t in gd_l else 1.9, 3)
+        e["regularite"] = round(max(0.0, min(1.0, 1 - (v - lo_r) / (hi_r - lo_r))), 3)
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(model, f, ensure_ascii=False, indent=1)

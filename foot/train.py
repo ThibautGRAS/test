@@ -322,6 +322,109 @@ def run(local_dir):
     # --- blend final (toutes les prédictions de backtest)
     W = blend_fit(np.array([q["f"] for q in preds]), np.array([q["y"] for q in preds]))
 
+    # --- VALIDATION par saison : métriques, simulation de saison, chaos
+    validation = {"saisons": {}, "chaos": {}}
+    rng = np.random.default_rng(42)
+    for s in blend_eval_seasons:
+        cur = [q for q in preds if q["season"] == s and q["mkt"] is not None]
+        vs = {}
+        for name, get_p in [("dc", lambda q: [q["dc"]["pH"], q["dc"]["pD"], q["dc"]["pA"]]),
+                            ("blend", lambda q: list(q["blend"])),
+                            ("marche", lambda q: list(q["mkt"]))]:
+            vs[name] = {
+                "logloss": round(float(np.mean([-math.log(max(get_p(q)[q["y"]], 1e-9)) for q in cur])), 4),
+                "acc": round(float(np.mean([int(np.argmax(get_p(q)) == q["y"]) for q in cur])), 4)}
+        hits = 0
+        for q in cur:
+            Mx = dc_matrix(q["dc"]["lam"], q["dc"]["mu"], 0.0)
+            bx, by = np.unravel_index(Mx.argmax(), Mx.shape)
+            r = m.loc[q["idx"]]
+            hits += int(bx == r.FTHG and by == r.FTAG)
+        vs["score_exact_pct"] = round(100.0 * hits / len(cur), 1)
+        vs["n"] = len(cur)
+
+        # simulation de la saison complète avec le modèle d'AVANT-saison
+        sm = m[m.Season == s]
+        t0 = sm.DateP.min()
+        pre = dc_fit(m[m.DateP < t0], t0, xi)
+        teams_s = sorted(set(sm.HomeTeam) | set(sm.AwayTeam))
+        ti = {t: i for i, t in enumerate(teams_s)}
+        # matrices de chaque match du calendrier réel
+        mats = []
+        for _, r in sm.iterrows():
+            p = dc_predict(pre, r.HomeTeam, r.AwayTeam)
+            if p is None:  # promu sans historique : prior moyen
+                p = {"lam": 1.25, "mu": 1.35}
+            mats.append((ti[r.HomeTeam], ti[r.AwayTeam],
+                         dc_matrix(p["lam"], p["mu"], pre["rho"]).ravel()))
+        NS, K = 2000, MAX_GOALS + 1
+        pts_sim = np.zeros((NS, len(teams_s)))
+        for hi_, ai_, mat in mats:
+            draws = rng.choice(K*K, size=NS, p=mat/mat.sum())
+            gh, ga = draws // K, draws % K
+            pts_sim[:, hi_] += np.where(gh > ga, 3, np.where(gh == ga, 1, 0))
+            pts_sim[:, ai_] += np.where(ga > gh, 3, np.where(gh == ga, 1, 0))
+        xpts = pts_sim.mean(axis=0)
+        # classement réel
+        real = {t: 0 for t in teams_s}
+        for _, r in sm.iterrows():
+            if r.FTHG > r.FTAG: real[r.HomeTeam] += 3
+            elif r.FTHG < r.FTAG: real[r.AwayTeam] += 3
+            else: real[r.HomeTeam] += 1; real[r.AwayTeam] += 1
+        order_p = sorted(teams_s, key=lambda t: -xpts[ti[t]])
+        order_r = sorted(teams_s, key=lambda t: -real[t])
+        rk_p = {t: i+1 for i, t in enumerate(order_p)}
+        rk_r = {t: i+1 for i, t in enumerate(order_r)}
+        d_rank = [rk_p[t] - rk_r[t] for t in teams_s]
+        n_t = len(teams_s)
+        rho_s = 1 - 6*sum(d*d for d in d_rank) / (n_t*(n_t**2 - 1))
+        errs = sorted(teams_s, key=lambda t: -abs(rk_p[t]-rk_r[t]))
+        vs["simulation"] = {
+            "mae_pts": round(float(np.mean([abs(xpts[ti[t]] - real[t]) for t in teams_s])), 1),
+            "spearman": round(float(rho_s), 3),
+            "champion_predit": order_p[0], "champion_reel": order_r[0],
+            "rates": [{"club": t, "predit": rk_p[t], "reel": rk_r[t]} for t in errs[:3]],
+            "reussites": [{"club": t, "predit": rk_p[t], "reel": rk_r[t]}
+                          for t in teams_s if rk_p[t] == rk_r[t]][:3]}
+        validation["saisons"][s] = vs
+
+    # chaos rétrospectif — deux questions distinctes :
+    # (1) l'IRRÉGULARITÉ (notre apport au-delà de l'entropie) rend-elle les matchs
+    #     plus durs à prédire ? -> log-loss du blend par tiers d'irrégularité
+    # (2) le favori du modèle est-il plus souvent BATTU dans les matchs irréguliers ?
+    def season_ptstd(season):
+        sm_ = m[m.Season == season]; d = {}
+        for _, r in sm_.iterrows():
+            ph = 3 if r.FTHG > r.FTAG else (1 if r.FTHG == r.FTAG else 0)
+            pa = 3 if r.FTAG > r.FTHG else (1 if r.FTHG == r.FTAG else 0)
+            d.setdefault(r.HomeTeam, []).append(ph); d.setdefault(r.AwayTeam, []).append(pa)
+        return {t: float(np.std(v)) for t, v in d.items()}
+    seasons_sorted = sorted(m.Season.unique())
+    rows = []
+    for q in preds:
+        if q["season"] not in blend_eval_seasons or q["mkt"] is None: continue
+        prev = seasons_sorted[seasons_sorted.index(q["season"]) - 1]
+        stds = season_ptstd(prev)
+        vals = sorted(stds.values()); lo_, hi_ = vals[0], vals[-1]
+        r = m.loc[q["idx"]]
+        irr = float(np.mean([(stds.get(t, vals[len(vals)//2]) - lo_) / (hi_ - lo_)
+                             for t in (r.HomeTeam, r.AwayTeam)]))
+        pb = list(q["blend"]); fav = int(np.argmax(pb))
+        beaten = int((fav == 0 and q["y"] == 2) or (fav == 2 and q["y"] == 0))
+        ll = -math.log(max(pb[q["y"]], 1e-9))
+        rows.append((irr, ll, beaten))
+    rows.sort()
+    n3 = len(rows) // 3
+    lo_t, hi_t = rows[:n3], rows[-n3:]
+    validation["chaos"] = {
+        "logloss_irr_basse": round(float(np.mean([x[1] for x in lo_t])), 3),
+        "logloss_irr_haute": round(float(np.mean([x[1] for x in hi_t])), 3),
+        "favori_battu_irr_basse_pct": round(100*float(np.mean([x[2] for x in lo_t])), 1),
+        "favori_battu_irr_haute_pct": round(100*float(np.mean([x[2] for x in hi_t])), 1),
+        "n_par_tiers": n3,
+        "lecture": "tiers bas vs haut d'irrégularité (constance des points saison précédente)"}
+    print("Validation chaos :", validation["chaos"])
+
     # --- modèle final sur tout l'historique
     now = m.DateP.max() + timedelta(days=1)
     final = dc_fit(m, now, xi)
@@ -356,6 +459,7 @@ def run(local_dir):
                                "log_pH_mkt", "log_pD_mkt", "log_pA_mkt", "mkt_dispo",
                                "elo_diff_100", "repos_diff_3", "forme_diff_3", "promu_diff"]},
         "backtest": metrics,
+        "validation": validation,
     }
     if new_teams:
         ref = [t for t in ["Angers", "Le Havre", "Auxerre", "Lorient"]

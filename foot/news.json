@@ -1,0 +1,72 @@
+{
+ "maj": "2026-07-21",
+ "source": "presse spécialisée (Maxifoot, Foot Mercato, Morning Foot, CulturePSG), juillet 2026",
+ "note": "Ajustements volontairement modérés (±0,03 à ±0,08 sur l'échelle log des forces). Le mercato est ouvert jusqu'au 1er septembre : signaux susceptibles d'évoluer. Coupe du monde achevée le 19 juillet — retours tardifs d'internationaux possibles en début de saison.",
+ "equipes": {
+  "Marseille": {
+   "att": -0.08,
+   "def": 0.0,
+   "titres": [
+    "Greenwood transféré à Fenerbahçe",
+    "Aubameyang vendu au Deportivo La Corogne",
+    "Traoré (Genoa) arrive en prêt avec option d'achat"
+   ]
+  },
+  "Paris SG": {
+   "att": -0.03,
+   "def": 0.0,
+   "titres": [
+    "Champion et double vainqueur de C1 — effectif dominant conservé",
+    "Ventes de Gonçalo Ramos (record) et Lee, départ Kolo Muani attendu",
+    "Piste Akliouche (Monaco) pour compenser"
+   ]
+  },
+  "Lens": {
+   "att": 0.0,
+   "def": 0.03,
+   "titres": [
+    "Dauphin surprise 2025-26, a contesté le titre au PSG",
+    "Nawrocki (Celtic) renforce la défense, Skoras arrive"
+   ]
+  },
+  "Paris FC": {
+   "att": 0.05,
+   "def": 0.0,
+   "titres": [
+    "Pagis recruté 15 M€ (Lorient), Cafaro (Nantes) et Mbemba (PSG) arrivent",
+    "Projet investisseur ambitieux confirmé"
+   ]
+  },
+  "Lorient": {
+   "att": -0.05,
+   "def": 0.0,
+   "titres": [
+    "Pagis, meilleur atout offensif, vendu au Paris FC"
+   ]
+  },
+  "Troyes": {
+   "att": -0.03,
+   "def": 0.0,
+   "titres": [
+    "Champion de Ligue 2 avec la manière",
+    "Bentayeb, meilleur buteur de L2, est parti — à compenser"
+   ]
+  },
+  "Le Mans": {
+   "att": -0.03,
+   "def": -0.03,
+   "titres": [
+    "Plus petit budget de L1 (~25 M€), deux montées consécutives",
+    "Feu vert DNCG sans restriction, fonds Outfield au capital",
+    "Risque de descente assumé publiquement"
+   ]
+  },
+  "Nice": {
+   "att": 0.0,
+   "def": -0.03,
+   "titres": [
+    "Maintien arraché en barrage face à Saint-Étienne — saison 2025-26 très difficile"
+   ]
+  }
+ }
+}

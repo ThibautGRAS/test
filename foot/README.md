@@ -54,3 +54,13 @@ BTTS) à partir du seul `model.json`.
 - **Chaos validé rétrospectivement** : log-loss 0,999 vs 0,943 et favori battu
   24,4 % vs 21,5 % entre tiers haut/bas d'irrégularité.
 - Synthèse tendances & feuille de route d'amélioration dans l'app.
+
+## v3.0 — Modèle amélioré + distribution des totaux
+- **Fusion tirs cadrés** (`dc_fit_fused`, proxy xG, poids 30 %) et **avantage domicile
+  par équipe** avec rétrécissement L2 : blend 0,9964 → 0,9953 en log-loss, corrélation
+  des rangs améliorée sur les 3 saisons (ρ 0,66/0,70/0,75), léger recul du score exact.
+- **Affichage des nuls corrigé** : marge de tolérance 0,16 en faveur du nul dans le
+  choix de la classe affichée, calibrée sur le taux historique (27,5 % de nuls affichés
+  vs 25,2 % réels ; auparavant 0,3 %).
+- **Validation** : distribution des totaux de buts modèle vs réel (backtest 911 matchs),
+  filtrable par équipe — 3 buts : 21,6 % prédit vs 21,5 % observé.

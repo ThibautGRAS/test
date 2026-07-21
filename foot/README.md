@@ -35,3 +35,12 @@ BTTS) à partir du seul `model.json`.
   Top 4 (C1), relégation. PRNG xorshift déterministe.
 - **Contexte structurel** dans `news.json` : Coupe d'Europe 2026-27 et ancienneté du banc
   par club, injectés dans les commentaires (« banc récent », « enchaîne avec la C1 »).
+
+## v2.3 — Comparateur de clubs & indice de chaos
+- **Onglet Clubs** : graphe à barres des 18 clubs, filtrable sur 6 critères —
+  Performance, Attaque, Défense (ratings DC + actu), Forme, Régularité
+  (constance des points 2025-26, calculée par `train.py`), Impact actu.
+- **Indice de chaos** par match : 55 % entropie du 1N2 calibré + 45 % irrégularité
+  moyenne des deux clubs. Au-delà du seuil (~30 % des matchs), la carte affiche
+  un **scénario surprise** : le score le plus probable dans l'issue inverse
+  (l'upset), avec sa probabilité réelle. Toujours visible dans le simulateur.

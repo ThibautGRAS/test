@@ -121,23 +121,24 @@ def add_context(m):
 
 # ------------------------------------------------------------- Dixon-Coles
 
-def dc_fit(sub, ref_date, xi, teams=None, x0=None):
-    """Ajuste attaque/défense/gamma/rho par max de vraisemblance pondérée."""
+def dc_fit(sub, ref_date, xi, teams=None, x0=None, cols=("FTHG", "FTAG"),
+           team_home=True, pen_home=25.0):
+    """Ajuste attaque/défense/gamma(+delta_i par équipe, rétréci)/rho par MV pondérée."""
     if teams is None:
         teams = sorted(set(sub.HomeTeam) | set(sub.AwayTeam))
     idx = {t: i for i, t in enumerate(teams)}
     n = len(teams)
     hi = sub.HomeTeam.map(idx).to_numpy()
     ai = sub.AwayTeam.map(idx).to_numpy()
-    x = sub.FTHG.to_numpy(float); y = sub.FTAG.to_numpy(float)
+    x = sub[cols[0]].to_numpy(float); y = sub[cols[1]].to_numpy(float)
     w = np.exp(-xi * (ref_date - sub.DateP).dt.days.to_numpy(float))
 
     def unpack(p):
-        return p[:n], p[n:2*n], p[2*n], p[2*n+1]
+        return p[:n], p[n:2*n], p[2*n], p[2*n+1], (p[2*n+2:2*n+2+n] if team_home else np.zeros(n))
 
     def nll_grad(p):
-        att, dfn, gam, rho = unpack(p)
-        lam = np.exp(att[hi] - dfn[ai] + gam)
+        att, dfn, gam, rho, dlt = unpack(p)
+        lam = np.exp(att[hi] - dfn[ai] + gam + dlt[hi])
         mu = np.exp(att[ai] - dfn[hi])
         # correction tau et dérivées
         tau = np.ones_like(lam); dtl = np.zeros_like(lam)
@@ -159,19 +160,47 @@ def dc_fit(sub, ref_date, xi, teams=None, x0=None):
         np.add.at(g, ai, dmu);         np.add.at(g, n + hi, -dmu)
         g[2*n] = dlam.sum()
         g[2*n+1] = -np.sum(w * dtr / tau)
-        # identifiabilité : pénalise sum(att) et sum(def)
+        if team_home:
+            np.add.at(g, 2*n+2 + hi, dlam)
+            # rétrécissement des deltas domicile vers 0 (shrinkage)
+            nll += pen_home * np.sum(dlt**2)
+            g[2*n+2:2*n+2+n] += 2*pen_home*dlt
+        # identifiabilité : pénalise sum(att), sum(def) et sum(delta)
         pen = 100.0
-        nll += pen * (att.sum()**2 + dfn.sum()**2)
+        nll += pen * (att.sum()**2 + dfn.sum()**2 + (dlt.sum()**2 if team_home else 0))
         g[:n] += 2*pen*att.sum(); g[n:2*n] += 2*pen*dfn.sum()
+        if team_home: g[2*n+2:2*n+2+n] += 2*pen*dlt.sum()
         return nll, g
 
-    p0 = x0 if x0 is not None else np.concatenate([np.zeros(2*n), [0.25, -0.05]])
+    npar = 2*n + 2 + (n if team_home else 0)
+    p0 = x0 if x0 is not None and len(x0) == npar else \
+         np.concatenate([np.zeros(2*n), [0.25, -0.05], np.zeros(n if team_home else 0)])
     res = minimize(nll_grad, p0, jac=True, method="L-BFGS-B",
-                   options={"maxiter": 500})
-    att, dfn, gam, rho = unpack(res.x)
+                   options={"maxiter": 600})
+    att, dfn, gam, rho, dlt = unpack(res.x)
     return {"teams": teams, "attack": att, "defense": dfn,
             "gamma": float(gam), "rho": float(np.clip(rho, -0.3, 0.3)),
-            "x": res.x}
+            "delta_home": dlt, "x": res.x}
+
+W_SOT = 0.30   # poids des ratings "tirs cadrés" dans la fusion (validé sur 2122)
+
+def dc_fit_fused(sub, ref_date, xi, teams=None):
+    """Fusionne un DC sur les buts et un DC sur les tirs cadrés (proxy xG,
+    moins bruité). Les tirs cadrés sont rescalés au taux de conversion moyen
+    de la ligue pour rester sur l'échelle des buts."""
+    fit_g = dc_fit(sub, ref_date, xi, teams=teams)
+    sub_s = sub[sub["HST"].notna() & sub["AST"].notna()].copy()
+    conv = (sub_s.FTHG.sum() + sub_s.FTAG.sum()) / max(sub_s.HST.sum() + sub_s.AST.sum(), 1)
+    sub_s["PgH"] = np.rint(sub_s.HST * conv).astype(float)   # pseudo-buts entiers
+    sub_s["PgA"] = np.rint(sub_s.AST * conv).astype(float)
+    fit_s = dc_fit(sub_s, ref_date, xi, teams=fit_g["teams"], cols=("PgH", "PgA"))
+    w = W_SOT
+    return {"teams": fit_g["teams"],
+            "attack": (1-w)*fit_g["attack"] + w*fit_s["attack"],
+            "defense": (1-w)*fit_g["defense"] + w*fit_s["defense"],
+            "gamma": (1-w)*fit_g["gamma"] + w*fit_s["gamma"],
+            "delta_home": (1-w)*fit_g["delta_home"] + w*fit_s["delta_home"],
+            "rho": fit_g["rho"]}
 
 def dc_matrix(lam, mu, rho, kmax=MAX_GOALS):
     k = np.arange(kmax + 1)
@@ -186,7 +215,9 @@ def dc_predict(fit, home, away):
     if home not in fit["teams"] or away not in fit["teams"]:
         return None
     i = fit["teams"].index(home); j = fit["teams"].index(away)
-    lam = math.exp(fit["attack"][i] - fit["defense"][j] + fit["gamma"])
+    dlt = fit.get("delta_home")
+    lam = math.exp(fit["attack"][i] - fit["defense"][j] + fit["gamma"] +
+                   (dlt[i] if dlt is not None else 0.0))
     mu = math.exp(fit["attack"][j] - fit["defense"][i])
     M = dc_matrix(lam, mu, fit["rho"])
     return {"lam": lam, "mu": mu,
@@ -254,7 +285,7 @@ def run(local_dir):
     best_xi, best_ll = None, 1e9
     for xi in DECAY_GRID:
         train = m[m.DateP < val.DateP.min()]
-        fit = dc_fit(train, val.DateP.min(), xi)
+        fit = dc_fit_fused(train, val.DateP.min(), xi)
         lls = []
         for _, r in val.iterrows():
             p = dc_predict(fit, r.HomeTeam, r.AwayTeam)
@@ -278,7 +309,7 @@ def run(local_dir):
             t0 = grp.DateP.min()
             train = m[m.DateP < t0]
             teams = sorted(set(train.HomeTeam) | set(train.AwayTeam))
-            fit = dc_fit(train, t0, xi, teams=teams)
+            fit = dc_fit_fused(train, t0, xi, teams=teams)
             for ridx, r in grp.iterrows():
                 p = dc_predict(fit, r.HomeTeam, r.AwayTeam)
                 if p is None:
@@ -346,7 +377,7 @@ def run(local_dir):
         # simulation de la saison complète avec le modèle d'AVANT-saison
         sm = m[m.Season == s]
         t0 = sm.DateP.min()
-        pre = dc_fit(m[m.DateP < t0], t0, xi)
+        pre = dc_fit_fused(m[m.DateP < t0], t0, xi)
         teams_s = sorted(set(sm.HomeTeam) | set(sm.AwayTeam))
         ti = {t: i for i, t in enumerate(teams_s)}
         # matrices de chaque match du calendrier réel
@@ -425,9 +456,36 @@ def run(local_dir):
         "lecture": "tiers bas vs haut d'irrégularité (constance des points saison précédente)"}
     print("Validation chaos :", validation["chaos"])
 
+    # --- distribution des totaux de buts (backtest) : réel vs modèle, par équipe
+    KMAXD = 7
+    def empty(): return [0.0]*(KMAXD+1)
+    dist = {"reel": {"Toutes": empty()}, "modele": {"Toutes": empty()},
+            "n": {"Toutes": 0}}
+    for q in preds:
+        if q["season"] not in blend_eval_seasons: continue
+        r = m.loc[q["idx"]]
+        tot_r = min(int(r.FTHG + r.FTAG), KMAXD)
+        Mx = dc_matrix(q["dc"]["lam"], q["dc"]["mu"], 0.0)
+        pt = [0.0]*(KMAXD+1)
+        for i in range(Mx.shape[0]):
+            for j in range(Mx.shape[1]):
+                pt[min(i+j, KMAXD)] += Mx[i, j]
+        for key in ("Toutes", r.HomeTeam, r.AwayTeam):
+            for d in (dist["reel"], dist["modele"], dist["n"]):
+                d.setdefault(key, empty() if d is not dist["n"] else 0)
+            dist["reel"][key][tot_r] += 1
+            dist["modele"][key] = [a+b for a, b in zip(dist["modele"][key], pt)]
+            dist["n"][key] += 1
+    for kind in ("reel", "modele"):
+        for key, v in dist[kind].items():
+            n_ = max(dist["n"][key], 1)
+            dist[kind][key] = [round(x/n_, 4) for x in v]
+    validation["dist_buts"] = {"reel": dist["reel"], "modele": dist["modele"],
+                               "n": dist["n"], "kmax": KMAXD}
+
     # --- modèle final sur tout l'historique
     now = m.DateP.max() + timedelta(days=1)
-    final = dc_fit(m, now, xi)
+    final = dc_fit_fused(m, now, xi)
     cur_teams = sorted(set(m[m.Season == m.Season.max()].HomeTeam) |
                        set(m[m.Season == m.Season.max()].AwayTeam))
     # calendrier de la saison cible : statuts actifs + équipes sans historique
@@ -448,6 +506,7 @@ def run(local_dir):
         "gamma": final["gamma"], "rho": final["rho"],
         "equipes": {t: {"attaque": round(float(final["attack"][final["teams"].index(t)]), 4),
                         "defense": round(float(final["defense"][final["teams"].index(t)]), 4),
+                        "delta_dom": round(float(final["delta_home"][final["teams"].index(t)]), 4),
                         "elo": round(state["elo"].get(t, ELO_START), 1),
                         "forme5": round(state["form5"].get(t, 1.0), 2),
                         "dernier_match": state["last_date"].get(t, ""),
@@ -468,6 +527,7 @@ def run(local_dir):
         p_def = float(np.mean([model["equipes"][t]["defense"] for t in ref])) - 0.05
         for t in new_teams:
             model["equipes"][t] = {"attaque": round(p_att, 4), "defense": round(p_def, 4),
+                                   "delta_dom": 0.0,
                                    "elo": ELO_PROMOTED, "forme5": 1.0, "dernier_match": "",
                                    "actif": True, "promu": True,
                                    "prior": "promu (moyenne clubs modestes - malus)"}

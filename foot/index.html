@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Génie du Foot — Prédiction Ligue 1</title>
+<title>Génie du Foot — Ligue 1 2026-27</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Archivo+Black&display=swap" rel="stylesheet">
 <style>
@@ -25,11 +25,19 @@ body{
   min-height:100vh;padding:max(env(safe-area-inset-top),14px) 14px calc(env(safe-area-inset-bottom) + 30px);
   max-width:560px;margin:0 auto;
 }
-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px}
-h1{font-family:'Archivo Black',sans-serif;font-size:26px;letter-spacing:.5px;line-height:1}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+h1{font-family:'Archivo Black',sans-serif;font-size:24px;letter-spacing:.5px;line-height:1}
 h1 em{font-style:normal;color:var(--amber)}
-.meta{font-size:10.5px;color:var(--muted);text-align:right;line-height:1.35}
-.tagline{font-size:11.5px;color:var(--muted);margin-bottom:14px;border-left:2px solid var(--edge);padding-left:8px}
+.meta{font-size:10px;color:var(--muted);text-align:right;line-height:1.35}
+
+nav{display:flex;gap:6px;margin-bottom:12px}
+nav button{
+  flex:1;padding:9px 4px;font-family:'Archivo',sans-serif;font-weight:800;font-size:11px;
+  letter-spacing:1px;border:1px solid var(--edge);background:var(--pitch2);color:var(--muted);
+  border-radius:9px;cursor:pointer;text-transform:uppercase;
+}
+nav button.on{background:var(--amber);color:#20180A;border-color:var(--amber)}
+.view{display:none}.view.on{display:block}
 
 .card{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:14px;margin-bottom:12px}
 label{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);display:block;margin-bottom:5px}
@@ -38,6 +46,43 @@ select,input{
   border-radius:9px;padding:11px 10px;font-size:16px;font-family:inherit;appearance:none;
 }
 select:focus,input:focus{outline:2px solid var(--amber);outline-offset:1px}
+
+/* ---- vue journées ---- */
+.jnav{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.jnav button{width:42px;height:42px;font-size:18px;border:1px solid var(--edge);
+  background:var(--pitch2);color:var(--amber);border-radius:10px;cursor:pointer}
+.jnav .jtitle{flex:1;text-align:center}
+.jnav .jtitle b{font-family:'Archivo Black',sans-serif;font-size:19px;display:block}
+.jnav .jtitle span{font-size:10.5px;color:var(--muted)}
+.jchips{display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.jchips::-webkit-scrollbar{display:none}
+.jchips button{
+  min-width:38px;height:30px;border-radius:8px;border:1px solid var(--edge);flex:0 0 auto;
+  background:var(--pitch2);color:var(--muted);font-size:11.5px;font-weight:700;cursor:pointer}
+.jchips button.on{background:var(--amber);color:#20180A;border-color:var(--amber)}
+
+.match{
+  display:grid;grid-template-columns:1fr 66px 1fr;align-items:center;gap:6px;
+  background:var(--card);border:1px solid var(--edge);border-radius:12px;
+  padding:10px 10px 7px;margin-bottom:8px;cursor:pointer;
+}
+.match:active{background:#173525}
+.match .mt{font-size:12.5px;font-weight:700;line-height:1.25;min-width:0;overflow-wrap:break-word}
+.match .mt.r{text-align:right}
+.match .mt small{display:block;font-weight:400;font-size:9px;color:var(--muted)}
+.match .msc{text-align:center}
+.match .msc b{font-family:'Archivo Black',sans-serif;font-size:21px;color:var(--amber);
+  letter-spacing:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.match .msc span{display:block;font-size:9px;color:var(--muted)}
+.mbar{grid-column:1 / -1;display:flex;height:5px;border-radius:3px;overflow:hidden;margin-top:6px}
+.mbar .h{background:#3E8A58}.mbar .d{background:#6B6B45}.mbar .a{background:#8A4A42}
+.mpct{grid-column:1 / -1;display:flex;justify-content:space-between;font-size:9px;
+  color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.badge{display:inline-block;font-size:8.5px;background:rgba(255,194,75,.15);color:var(--amber);
+  border:1px solid rgba(255,194,75,.4);border-radius:4px;padding:0 4px;margin-left:3px;vertical-align:1px}
+
+/* ---- simulateur ---- */
 .teams{display:grid;grid-template-columns:1fr 34px 1fr;gap:8px;align-items:end}
 #swap{height:44px;border:1px solid var(--edge);background:var(--pitch2);color:var(--amber);
   border-radius:9px;font-size:17px;cursor:pointer}
@@ -45,35 +90,35 @@ select:focus,input:focus{outline:2px solid var(--amber);outline-offset:1px}
 details{margin-top:10px}
 summary{font-size:11.5px;color:var(--muted);cursor:pointer;user-select:none}
 summary::marker{color:var(--amber)}
-.hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4}
-
-/* --- tableau d'affichage façon scoreboard --- */
+.hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+.chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px}
+.chk input{width:18px;height:18px;accent-color:var(--amber)}
+button.go{
+  width:100%;margin-top:12px;padding:13px;border:none;border-radius:10px;cursor:pointer;
+  font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:1px;
+  background:linear-gradient(180deg,var(--amber),#E8A63A);color:#20180A;
+}
+button.go:active{transform:translateY(1px)}
 #board{display:none}
 .scoreline{
   display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;
-  background:linear-gradient(180deg,#0A130E, #0E1F15);border:1px solid var(--edge);
+  background:linear-gradient(180deg,#0A130E,#0E1F15);border:1px solid var(--edge);
   border-radius:12px;padding:14px 10px;margin-bottom:12px;
 }
 .scoreline .t{font-size:13px;font-weight:700;text-align:center;line-height:1.25}
 .scoreline .t small{display:block;font-weight:400;font-size:9.5px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-top:3px}
-.digits{
-  font-family:'Archivo Black',sans-serif;font-size:46px;letter-spacing:2px;color:var(--amber);
-  text-shadow:0 0 22px rgba(255,194,75,.35);font-variant-numeric:tabular-nums;white-space:nowrap;
-}
+.digits{font-family:'Archivo Black',sans-serif;font-size:46px;letter-spacing:2px;color:var(--amber);
+  text-shadow:0 0 22px rgba(255,194,75,.35);font-variant-numeric:tabular-nums;white-space:nowrap}
 .digits .p{display:block;text-align:center;font-family:'Archivo',sans-serif;font-size:10.5px;
   color:var(--muted);letter-spacing:1px;text-shadow:none;margin-top:2px}
-
 .bar{display:flex;height:34px;border-radius:9px;overflow:hidden;border:1px solid var(--edge);margin-bottom:6px}
 .bar div{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;min-width:0;overflow:hidden;white-space:nowrap}
 .bar .h{background:#2E6B44}.bar .d{background:#41412B}.bar .a{background:#5A2F2A}
 .legend{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:12px;padding:0 2px}
-
 table.mx{border-collapse:collapse;width:100%;table-layout:fixed}
 .mx th{font-size:9.5px;color:var(--muted);font-weight:400;padding:2px}
-.mx td{
-  text-align:center;font-size:9.5px;padding:0;height:36px;border:1px solid rgba(30,64,48,.55);
-  font-variant-numeric:tabular-nums;border-radius:3px;
-}
+.mx td{text-align:center;font-size:9.5px;padding:0;height:36px;border:1px solid rgba(30,64,48,.55);
+  font-variant-numeric:tabular-nums;border-radius:3px}
 .mx td.best{outline:2px solid var(--line);outline-offset:-2px;font-weight:800}
 .axis{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 .mkt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -85,19 +130,20 @@ table.mx{border-collapse:collapse;width:100%;table-layout:fixed}
 .tops div:last-child{border:none}
 .tops .sc{font-weight:800;font-variant-numeric:tabular-nums}
 
+/* ---- modèle ---- */
 h2{font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin:2px 0 10px}
 table.bt{width:100%;border-collapse:collapse;font-size:12px}
 .bt th,.bt td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--edge);font-variant-numeric:tabular-nums}
 .bt th:first-child,.bt td:first-child{text-align:left}
 .bt th{color:var(--muted);font-weight:400;font-size:10.5px;text-transform:uppercase;letter-spacing:.8px}
 .win{color:var(--good);font-weight:700}
+.news-club{border-bottom:1px dashed rgba(30,64,48,.8);padding:9px 0}
+.news-club:last-child{border:none}
+.news-club b{font-size:13px}
+.news-club .adj{font-size:10px;font-variant-numeric:tabular-nums;color:var(--muted);margin-left:6px}
+.news-club .adj .up{color:var(--good)}.news-club .adj .dn{color:var(--bad)}
+.news-club ul{margin:5px 0 0 16px;font-size:11.5px;color:var(--muted);line-height:1.5}
 footer{font-size:10px;color:var(--muted);line-height:1.5;margin-top:16px}
-button.go{
-  width:100%;margin-top:12px;padding:13px;border:none;border-radius:10px;cursor:pointer;
-  font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:1px;
-  background:linear-gradient(180deg,var(--amber),#E8A63A);color:#20180A;
-}
-button.go:active{transform:translateY(1px)}
 @media (prefers-reduced-motion:no-preference){
   #board.show{animation:rise .35s ease-out}
   @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -106,165 +152,266 @@ button.go:active{transform:translateY(1px)}
 </head>
 <body>
 <header>
-  <h1>GÉNIE<br>DU <em>FOOT</em></h1>
-  <div class="meta" id="meta">chargement du modèle…</div>
+  <h1>GÉNIE DU <em>FOOT</em></h1>
+  <div class="meta" id="meta">chargement…</div>
 </header>
-<p class="tagline">Distributions de scores Ligue 1 — Dixon-Coles pondéré + Elo + calibration marché. Entraîné sur 10 saisons.</p>
 
-<div class="card">
-  <div class="teams">
-    <div><label for="home">Domicile</label><select id="home"></select></div>
-    <button id="swap" title="Inverser" aria-label="Inverser domicile et extérieur">⇅</button>
-    <div><label for="away">Extérieur</label><select id="away"></select></div>
+<nav>
+  <button id="nav-j" class="on">Saison 26-27</button>
+  <button id="nav-s">Simulateur</button>
+  <button id="nav-m">Modèle & actu</button>
+</nav>
+
+<!-- ============ VUE JOURNÉES ============ -->
+<div class="view on" id="view-j">
+  <div class="jnav">
+    <button id="jprev" aria-label="Journée précédente">‹</button>
+    <div class="jtitle"><b id="jname"></b><span id="jdate"></span></div>
+    <button id="jnext" aria-label="Journée suivante">›</button>
   </div>
-  <details>
-    <summary>Cotes 1N2 du match (optionnel — améliore la calibration)</summary>
-    <div class="opt-row">
-      <div><label for="oh">Cote 1</label><input id="oh" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 1.85"></div>
-      <div><label for="od">Cote N</label><input id="od" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 3.60"></div>
-      <div><label for="oa">Cote 2</label><input id="oa" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 4.20"></div>
-    </div>
-    <div class="opt-row">
-      <div><label for="rh">Repos dom. (j)</label><input id="rh" type="number" min="1" max="14" value="7" inputmode="numeric"></div>
-      <div><label for="ra">Repos ext. (j)</label><input id="ra" type="number" min="1" max="14" value="7" inputmode="numeric"></div>
-      <div></div>
-    </div>
-  </details>
-  <button class="go" id="go">PRÉDIRE LE MATCH</button>
+  <div class="jchips" id="jchips"></div>
+  <div id="jlist"></div>
+  <div class="hint">Score affiché : le plus probable au sein de l'issue dominante du 1N2 calibré
+    (Dixon-Coles pondéré + Elo + signal actu 📰). Touche un match pour la matrice complète.</div>
 </div>
 
-<div id="board">
-  <div class="scoreline">
-    <div class="t" id="bh"></div>
-    <div><span class="digits" id="score"></span><span class="p digits" id="scorep"></span></div>
-    <div class="t" id="ba"></div>
-  </div>
-  <div class="bar"><div class="h" id="ph"></div><div class="d" id="pd"></div><div class="a" id="pa"></div></div>
-  <div class="legend"><span>victoire domicile</span><span>nul</span><span>victoire extérieur</span></div>
-
+<!-- ============ VUE SIMULATEUR ============ -->
+<div class="view" id="view-s">
   <div class="card">
-    <h2>Matrice des scores exacts</h2>
-    <div style="display:flex;gap:6px;align-items:center">
-      <div class="axis" style="writing-mode:vertical-rl;transform:rotate(180deg);text-align:center" id="axh"></div>
-      <div style="flex:1">
-        <div class="axis" style="text-align:center;margin-bottom:4px" id="axa"></div>
-        <table class="mx" id="mx"></table>
+    <div class="teams">
+      <div><label for="home">Domicile</label><select id="home"></select></div>
+      <button id="swap" title="Inverser" aria-label="Inverser domicile et extérieur">⇅</button>
+      <div><label for="away">Extérieur</label><select id="away"></select></div>
+    </div>
+    <div class="chk"><input type="checkbox" id="usenews" checked>
+      <label for="usenews" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px">Intégrer le signal actu (mercato, forme, contexte)</label></div>
+    <details>
+      <summary>Cotes 1N2 du match (optionnel — améliore la calibration)</summary>
+      <div class="opt-row">
+        <div><label for="oh">Cote 1</label><input id="oh" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 1.85"></div>
+        <div><label for="od">Cote N</label><input id="od" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 3.60"></div>
+        <div><label for="oa">Cote 2</label><input id="oa" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 4.20"></div>
       </div>
+      <div class="opt-row">
+        <div><label for="rh">Repos dom. (j)</label><input id="rh" type="number" min="1" max="14" value="7" inputmode="numeric"></div>
+        <div><label for="ra">Repos ext. (j)</label><input id="ra" type="number" min="1" max="14" value="7" inputmode="numeric"></div>
+        <div></div>
+      </div>
+    </details>
+    <button class="go" id="go">PRÉDIRE LE MATCH</button>
+  </div>
+  <div id="board">
+    <div class="scoreline">
+      <div class="t" id="bh"></div>
+      <div><span class="digits" id="score"></span><span class="p digits" id="scorep"></span></div>
+      <div class="t" id="ba"></div>
     </div>
-    <div class="mkt">
-      <div class="cell"><b id="ou"></b><span>plus de 2,5 buts</span></div>
-      <div class="cell"><b id="btts"></b><span>les deux marquent</span></div>
-      <div class="cell"><b id="xgh"></b><span>buts attendus dom.</span></div>
-      <div class="cell"><b id="xga"></b><span>buts attendus ext.</span></div>
+    <div class="bar"><div class="h" id="ph"></div><div class="d" id="pd"></div><div class="a" id="pa"></div></div>
+    <div class="legend"><span>victoire domicile</span><span>nul</span><span>victoire extérieur</span></div>
+    <div class="card">
+      <h2>Matrice des scores exacts</h2>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="axis" style="writing-mode:vertical-rl;transform:rotate(180deg);text-align:center" id="axh"></div>
+        <div style="flex:1">
+          <div class="axis" style="text-align:center;margin-bottom:4px" id="axa"></div>
+          <table class="mx" id="mx"></table>
+        </div>
+      </div>
+      <div class="mkt">
+        <div class="cell"><b id="ou"></b><span>plus de 2,5 buts</span></div>
+        <div class="cell"><b id="btts"></b><span>les deux marquent</span></div>
+        <div class="cell"><b id="xgh"></b><span>buts attendus dom.</span></div>
+        <div class="cell"><b id="xga"></b><span>buts attendus ext.</span></div>
+      </div>
+      <div class="tops" id="tops"></div>
     </div>
-    <div class="tops" id="tops"></div>
   </div>
 </div>
 
-<div class="card">
-  <h2>Backtest 3 saisons (2023-24 → 2025-26)</h2>
-  <table class="bt" id="bt"></table>
-  <div class="hint" id="btnote"></div>
+<!-- ============ VUE MODÈLE & ACTU ============ -->
+<div class="view" id="view-m">
+  <div class="card">
+    <h2>Signal actu — mercato & contexte</h2>
+    <div class="hint" id="newsnote"></div>
+    <div id="newslist" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>Backtest 3 saisons (2023-24 → 2025-26)</h2>
+    <table class="bt" id="bt"></table>
+    <div class="hint" id="btnote"></div>
+  </div>
 </div>
 
 <footer>
   Modèle statistique à but expérimental. Les probabilités sont des estimations calibrées sur l'historique,
-  pas des certitudes — le marché des cotes reste la référence la plus informée. Aucune incitation au pari.
-  Données : football-data.co.uk · Réentraînement hebdomadaire automatique.
+  pas des certitudes — les compos, blessures et le mercato en cours pèsent sur les résultats réels.
+  Aucune incitation au pari. Données : football-data.co.uk · openfootball · presse sportive.
 </footer>
 
 <script>
 'use strict';
-let M = null;
+let M=null, FIX=null, NEWS=null, curJ=1, JOUR=[];
 
 const $ = id => document.getElementById(id);
 const pct = x => (100*x).toFixed(x >= 0.095 ? 0 : 1) + '%';
+const MOIS = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+const fdate = s => { const d = new Date(s+'T12:00:00'); return d.getDate()+' '+MOIS[d.getMonth()]+' '+d.getFullYear(); };
 
-function poisRow(l, n){
-  const r = [Math.exp(-l)];
-  for(let k=1; k<=n; k++) r.push(r[k-1]*l/k);
-  return r;
+function poisRow(l,n){ const r=[Math.exp(-l)]; for(let k=1;k<=n;k++) r.push(r[k-1]*l/k); return r; }
+function dcMatrix(lam,mu,rho,n){
+  const ph=poisRow(lam,n), pa=poisRow(mu,n);
+  const X=ph.map(a=>pa.map(b=>a*b));
+  X[0][0]*=1-lam*mu*rho; X[0][1]*=1+lam*rho; X[1][0]*=1+mu*rho; X[1][1]*=1-rho;
+  let s=0; X.forEach(r=>r.forEach(v=>s+=Math.max(v,0)));
+  return X.map(r=>r.map(v=>Math.max(v,0)/s));
 }
-function dcMatrix(lam, mu, rho, n){
-  const ph = poisRow(lam,n), pa = poisRow(mu,n);
-  const X = ph.map(a => pa.map(b => a*b));
-  X[0][0] *= 1 - lam*mu*rho; X[0][1] *= 1 + lam*rho;
-  X[1][0] *= 1 + mu*rho;     X[1][1] *= 1 - rho;
-  let s = 0; X.forEach(r => r.forEach(v => s += Math.max(v,0)));
-  return X.map(r => r.map(v => Math.max(v,0)/s));
-}
-function devig(oh, od, oa){
-  if(!(oh>1 && od>1 && oa>1)) return null;
-  const r = [1/oh, 1/od, 1/oa], s = r[0]+r[1]+r[2];
-  return r.map(v => v/s);
+function devig(oh,od,oa){
+  if(!(oh>1&&od>1&&oa>1)) return null;
+  const r=[1/oh,1/od,1/oa], s=r[0]+r[1]+r[2];
+  return r.map(v=>v/s);
 }
 function softmax(z){
-  const m = Math.max(...z), e = z.map(v => Math.exp(v-m)), s = e.reduce((a,b)=>a+b);
-  return e.map(v => v/s);
+  const m=Math.max(...z), e=z.map(v=>Math.exp(v-m)), s=e.reduce((a,b)=>a+b);
+  return e.map(v=>v/s);
+}
+function newsAdj(t){
+  return (NEWS && NEWS.equipes[t]) || {att:0, def:0};
 }
 
-function predict(){
-  const h = $('home').value, a = $('away').value;
-  if(h === a){ alert('Choisis deux équipes différentes.'); return; }
-  const th = M.equipes[h], ta = M.equipes[a];
-  const lam = Math.exp(th.attaque - ta.defense + M.gamma);
-  const mu  = Math.exp(ta.attaque - th.defense);
+/* Prédiction centrale : matrice + 1N2 calibré. odds/rest optionnels. */
+function computeMatch(h, a, opts){
+  const o = Object.assign({news:true, oh:0, od:0, oa:0, rh:7, ra:7}, opts||{});
+  const th=M.equipes[h], ta=M.equipes[a];
+  const nh = o.news ? newsAdj(h) : {att:0,def:0};
+  const na = o.news ? newsAdj(a) : {att:0,def:0};
+  const lam = Math.exp((th.attaque+nh.att) - (ta.defense+na.def) + M.gamma);
+  const mu  = Math.exp((ta.attaque+na.att) - (th.defense+nh.def));
   const n = M.meta.max_goals;
   const X = dcMatrix(lam, mu, M.rho, n);
-
-  // 1N2 issus de la matrice
-  let pH=0, pD=0, pA=0;
+  let pH=0,pD=0,pA=0;
   for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
-    if(i>j) pH+=X[i][j]; else if(i===j) pD+=X[i][j]; else pA+=X[i][j];
+    if(i>j)pH+=X[i][j]; else if(i===j)pD+=X[i][j]; else pA+=X[i][j];
   }
-  // blend calibré (cotes optionnelles + contexte)
-  const mkt = devig(+$('oh').value, +$('od').value, +$('oa').value);
+  const mkt = devig(o.oh, o.od, o.oa);
   const lg = p => Math.log(Math.max(p,1e-9));
   const f = [lg(pH), lg(pD), lg(pA)];
   if(mkt) f.push(lg(mkt[0]), lg(mkt[1]), lg(mkt[2]), 1);
   else    f.push(lg(pH), lg(pD), lg(pA), 0);
-  f.push((th.elo + M.meta.elo_home - ta.elo)/100,
-         ((+$('rh').value||7) - (+$('ra').value||7))/3,
-         (th.forme5 - ta.forme5)/3,
-         (th.promu?1:0) - (ta.promu?1:0));
+  f.push((th.elo + M.meta.elo_home - ta.elo)/100, (o.rh-o.ra)/3,
+         (th.forme5-ta.forme5)/3, (th.promu?1:0)-(ta.promu?1:0));
   const pb = softmax(M.blend.W.map(row => row.reduce((s,w,i)=>s+w*f[i],0)));
-
   // recalage doux de la matrice sur le 1N2 calibré
-  const target = [pb[0], pb[1], pb[2]], cur = [pH, pD, pA];
+  const cur=[pH,pD,pA];
   for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
     const c = i>j?0:(i===j?1:2);
-    X[i][j] *= target[c]/Math.max(cur[c],1e-9);
+    X[i][j] *= pb[c]/Math.max(cur[c],1e-9);
   }
-
-  render(h, a, X, pb, lam, mu, n);
+  let sum=0;
+  for(let i=0;i<=n;i++) for(let j=0;j<=n;j++) sum+=X[i][j];
+  for(let i=0;i<=n;i++) for(let j=0;j<=n;j++) X[i][j]/=sum;
+  // score prédit : case la plus probable AU SEIN de l'issue 1N2 dominante
+  const cls = pb.indexOf(Math.max(...pb));
+  let bi=0,bj=0,bp=0;
+  for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
+    const c = i>j?0:(i===j?1:2);
+    if(c===cls && X[i][j]>bp){ bp=X[i][j]; bi=i; bj=j; }
+  }
+  return {X, pb, lam, mu, bi, bj, bp, n};
 }
 
-function render(h, a, X, pb, lam, mu, n){
+/* ---------- vue journées ---------- */
+function buildJournees(){
+  const rest = {}, byJ = {};
+  FIX.fixtures.forEach(f => (byJ[f.j] = byJ[f.j]||[]).push(f));
+  JOUR = Object.keys(byJ).map(Number).sort((a,b)=>a-b);
+  const lastPlayed = {};
+  JOUR.forEach(j => byJ[j].forEach(f => {
+    const d = new Date(f.date+'T12:00:00');
+    [f.h, f.a].forEach(t => {
+      const prev = lastPlayed[t];
+      f[t===f.h?'rh':'ra'] = prev ? Math.min(Math.round((d-prev)/86400000), 14) : 7;
+      lastPlayed[t] = d;
+    });
+  }));
+  window._byJ = byJ;
+  $('jchips').innerHTML = JOUR.map(j =>
+    '<button data-j="'+j+'"'+(j===curJ?' class="on"':'')+'>J'+j+'</button>').join('');
+  $('jchips').addEventListener('click', e => {
+    if(e.target.dataset.j) showJournee(+e.target.dataset.j);
+  });
+  $('jprev').addEventListener('click', () => showJournee(Math.max(1, curJ-1)));
+  $('jnext').addEventListener('click', () => showJournee(Math.min(JOUR.length, curJ+1)));
+  showJournee(nextJournee());
+}
+function nextJournee(){
+  const today = new Date().toISOString().slice(0,10);
+  for(const j of JOUR){ if(window._byJ[j].some(f => f.date >= today)) return j; }
+  return 1;
+}
+function showJournee(j){
+  curJ = j;
+  document.querySelectorAll('#jchips button').forEach(b =>
+    b.classList.toggle('on', +b.dataset.j === j));
+  const chip = document.querySelector('#jchips button.on');
+  if(chip) chip.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+  const fx = window._byJ[j];
+  const dates = fx.map(f=>f.date).sort();
+  $('jname').textContent = 'Journée '+j;
+  $('jdate').textContent = dates[0]===dates.at(-1) ? fdate(dates[0])
+    : fdate(dates[0]) + ' – ' + fdate(dates.at(-1));
+  $('jlist').innerHTML = fx.map((f,i) => {
+    const p = computeMatch(f.h, f.a, {rh:f.rh, ra:f.ra});
+    f._p = p;
+    const bh = NEWS && NEWS.equipes[f.h] ? '<span class="badge">📰</span>' : '';
+    const ba = NEWS && NEWS.equipes[f.a] ? '<span class="badge">📰</span>' : '';
+    return '<div class="match" data-i="'+i+'">'+
+      '<div class="mt">'+f.h+bh+'<small>'+(M.equipes[f.h].promu?'promu · ':'')+'Elo '+M.equipes[f.h].elo.toFixed(0)+'</small></div>'+
+      '<div class="msc"><b>'+p.bi+'–'+p.bj+'</b><span>'+pct(p.bp)+'</span></div>'+
+      '<div class="mt r">'+ba+f.a+'<small>'+(M.equipes[f.a].promu?'promu · ':'')+'Elo '+M.equipes[f.a].elo.toFixed(0)+'</small></div>'+
+      '<div class="mbar"><div class="h" style="flex:'+p.pb[0]+'"></div><div class="d" style="flex:'+p.pb[1]+'"></div><div class="a" style="flex:'+p.pb[2]+'"></div></div>'+
+      '<div class="mpct"><span>1 '+pct(p.pb[0])+'</span><span>N '+pct(p.pb[1])+'</span><span>2 '+pct(p.pb[2])+'</span></div>'+
+      '</div>';
+  }).join('');
+  $('jlist').querySelectorAll('.match').forEach(el =>
+    el.addEventListener('click', () => {
+      const f = fx[+el.dataset.i];
+      $('home').value = f.h; $('away').value = f.a;
+      $('rh').value = f.rh; $('ra').value = f.ra;
+      $('oh').value = $('od').value = $('oa').value = '';
+      switchView('s'); predict();
+    }));
+}
+
+/* ---------- simulateur ---------- */
+function predict(){
+  const h=$('home').value, a=$('away').value;
+  if(h===a){ alert('Choisis deux équipes différentes.'); return; }
+  const p = computeMatch(h, a, {news: $('usenews').checked,
+    oh:+$('oh').value, od:+$('od').value, oa:+$('oa').value,
+    rh:+$('rh').value||7, ra:+$('ra').value||7});
+  render(h, a, p);
+}
+function render(h, a, P){
+  const {X, pb, lam, mu, bi, bj, bp, n} = P;
   $('bh').innerHTML = h + '<small>domicile · Elo ' + M.equipes[h].elo.toFixed(0) + '</small>';
   $('ba').innerHTML = a + '<small>extérieur · Elo ' + M.equipes[a].elo.toFixed(0) + '</small>';
-  // score le plus probable
-  let bi=0, bj=0, bp=0;
-  const flat = [];
-  for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
-    flat.push([i,j,X[i][j]]);
-    if(X[i][j] > bp){ bp = X[i][j]; bi=i; bj=j; }
-  }
   $('score').textContent = bi + ' – ' + bj;
   $('scorep').textContent = 'score le plus probable · ' + pct(bp);
-  const seg = [['ph',pb[0]],['pd',pb[1]],['pa',pb[2]]];
-  seg.forEach(([id,p]) => { const el=$(id); el.style.flex = p; el.textContent = pct(p); });
-
-  // matrice 0..5 puis 6+ agrégé
-  const K = 6;
+  [['ph',pb[0]],['pd',pb[1]],['pa',pb[2]]].forEach(([id,p]) => {
+    const el=$(id); el.style.flex=p; el.textContent=pct(p);
+  });
+  const K=6, flat=[];
   const agg = Array.from({length:K+1}, () => new Array(K+1).fill(0));
-  flat.forEach(([i,j,p]) => agg[Math.min(i,K)][Math.min(j,K)] += p);
+  for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
+    flat.push([i,j,X[i][j]]); agg[Math.min(i,K)][Math.min(j,K)] += X[i][j];
+  }
   const mxmax = Math.max(...agg.flat());
   let html = '<tr><th></th>' + Array.from({length:K+1},(_,j)=>'<th>'+(j<K?j:K+'+')+'</th>').join('') + '</tr>';
   for(let i=0;i<=K;i++){
     html += '<tr><th>'+(i<K?i:K+'+')+'</th>';
     for(let j=0;j<=K;j++){
-      const p = agg[i][j], t = p/mxmax;
-      const bg = 'rgba(255,'+Math.round(194-70*t)+','+Math.round(75-30*t)+','+(0.06+0.85*t).toFixed(2)+')';
+      const p=agg[i][j], t=p/mxmax;
+      const bg='rgba(255,'+Math.round(194-70*t)+','+Math.round(75-30*t)+','+(0.06+0.85*t).toFixed(2)+')';
       const fg = t>0.45 ? '#20180A' : 'var(--line)';
       const best = (Math.min(bi,K)===i && Math.min(bj,K)===j) ? ' class="best"' : '';
       html += '<td'+best+' style="background:'+bg+';color:'+fg+'">'+(100*p).toFixed(1)+'</td>';
@@ -272,56 +419,71 @@ function render(h, a, X, pb, lam, mu, n){
     html += '</tr>';
   }
   $('mx').innerHTML = html;
-  $('axh').textContent = 'buts ' + h;
-  $('axa').textContent = 'buts ' + a;
-
+  $('axh').textContent = 'buts ' + h; $('axa').textContent = 'buts ' + a;
   let over=0, btts=0;
   flat.forEach(([i,j,p]) => { if(i+j>2.5) over+=p; if(i>0&&j>0) btts+=p; });
-  $('ou').textContent = pct(over);
-  $('btts').textContent = pct(btts);
-  $('xgh').textContent = lam.toFixed(2);
-  $('xga').textContent = mu.toFixed(2);
-
+  $('ou').textContent=pct(over); $('btts').textContent=pct(btts);
+  $('xgh').textContent=lam.toFixed(2); $('xga').textContent=mu.toFixed(2);
   const top5 = flat.sort((u,v)=>v[2]-u[2]).slice(0,5);
   $('tops').innerHTML = '<label>Scores les plus probables</label>' +
     top5.map(([i,j,p]) => '<div><span class="sc">'+i+' – '+j+'</span><span>'+pct(p)+'</span></div>').join('');
-
-  const b = $('board'); b.style.display='block'; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+  const b=$('board'); b.style.display='block';
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
 }
 
-function fillBacktest(){
-  const bt = M.backtest, rows = [
-    ['Dixon-Coles seul', bt.dixon_coles], ['Modèle calibré (blend)', bt.blend], ['Cotes du marché', bt.marche]
-  ];
-  const best = Math.min(...rows.map(r => r[1].logloss));
+/* ---------- modèle & actu ---------- */
+function fillModelView(){
+  $('newsnote').textContent = NEWS ? NEWS.note + ' Maj : ' + NEWS.maj + ' — ' + NEWS.source : 'signal actu indisponible';
+  if(NEWS){
+    const sgn = v => v===0 ? '' : '<span class="'+(v>0?'up':'dn')+'">'+(v>0?'+':'')+v.toFixed(2)+'</span>';
+    $('newslist').innerHTML = Object.entries(NEWS.equipes).map(([t,e]) =>
+      '<div class="news-club"><b>'+t+'</b><span class="adj">attaque '+(sgn(e.att)||'=')+' · défense '+(sgn(e.def)||'=')+'</span>'+
+      '<ul>'+e.titres.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>').join('');
+  }
+  const bt=M.backtest, rows=[['Dixon-Coles seul',bt.dixon_coles],
+    ['Modèle calibré (blend)',bt.blend],['Cotes du marché',bt.marche]];
+  const best=Math.min(...rows.map(r=>r[1].logloss));
   $('bt').innerHTML = '<tr><th>Approche</th><th>Log-loss</th><th>RPS</th><th>Précision 1N2</th></tr>' +
-    rows.map(([nm,m]) =>
-      '<tr><td>'+nm+'</td><td class="'+(m.logloss===best?'win':'')+'">'+m.logloss.toFixed(3)+
-      '</td><td>'+m.rps.toFixed(3)+'</td><td>'+(100*m.accuracy).toFixed(1)+'%</td></tr>').join('');
-  $('btnote').textContent = 'Walk-forward sur ' + bt.n_matchs_eval + ' matchs, réajustement mensuel. ' +
-    'Score exact trouvé (case la plus probable) : ' + bt.score_exact_pct + '% des matchs. ' +
-    'Le marché reste devant — normal : les cotes intègrent blessures et compos. Le blend comble l\'essentiel de l\'écart.';
+    rows.map(([nm,m]) => '<tr><td>'+nm+'</td><td class="'+(m.logloss===best?'win':'')+'">'+
+      m.logloss.toFixed(3)+'</td><td>'+m.rps.toFixed(3)+'</td><td>'+(100*m.accuracy).toFixed(1)+'%</td></tr>').join('');
+  $('btnote').textContent = 'Walk-forward sur '+bt.n_matchs_eval+' matchs, réajustement mensuel. '+
+    'Score exact trouvé : '+bt.score_exact_pct+'% des matchs. Le marché reste devant — normal : '+
+    'les cotes intègrent compos et blessures en temps réel. Le signal actu vise à en capter une partie.';
 }
 
-fetch('model.json').then(r => r.json()).then(m => {
-  M = m;
-  const actives = Object.keys(m.equipes).filter(t => m.equipes[t].actif).sort();
-  const others  = Object.keys(m.equipes).filter(t => !m.equipes[t].actif).sort();
-  const opts = list => list.map(t => '<option>'+t+'</option>').join('');
-  const html = '<optgroup label="Ligue 1 '+m.meta.saisons.at(-1)+'">'+opts(actives)+'</optgroup>' +
+/* ---------- navigation ---------- */
+function switchView(v){
+  ['j','s','m'].forEach(k => {
+    $('view-'+k).classList.toggle('on', k===v);
+    $('nav-'+k).classList.toggle('on', k===v);
+  });
+}
+['j','s','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
+
+/* ---------- init ---------- */
+Promise.all([
+  fetch('model.json').then(r=>r.json()),
+  fetch('fixtures.json').then(r=>r.json()),
+  fetch('news.json').then(r=>r.json()).catch(()=>null)
+]).then(([m, fx, nw]) => {
+  M=m; FIX=fx; NEWS=nw;
+  const actives = Object.keys(m.equipes).filter(t=>m.equipes[t].actif).sort();
+  const others  = Object.keys(m.equipes).filter(t=>!m.equipes[t].actif).sort();
+  const opts = l => l.map(t=>'<option>'+t+'</option>').join('');
+  const html = '<optgroup label="Ligue 1 2026-27">'+opts(actives)+'</optgroup>'+
                '<optgroup label="Anciennes L1">'+opts(others)+'</optgroup>';
-  $('home').innerHTML = html; $('away').innerHTML = html;
-  $('home').value = actives.includes('Paris SG') ? 'Paris SG' : actives[0];
-  $('away').value = actives.includes('Marseille') ? 'Marseille' : actives[1];
-  $('meta').innerHTML = m.meta.n_matchs + ' matchs · ' + m.meta.saisons.length + ' saisons<br>maj ' +
-    m.meta.derniere_date + ' · ½-vie ' + m.meta.demi_vie_jours + ' j';
-  fillBacktest();
-}).catch(() => { $('meta').textContent = 'model.json introuvable'; });
+  $('home').innerHTML=html; $('away').innerHTML=html;
+  $('home').value = 'Paris SG'; $('away').value = 'Marseille';
+  $('meta').innerHTML = m.meta.n_matchs+' matchs · '+m.meta.saisons.length+' saisons<br>maj '+
+    m.meta.derniere_date+' · actu '+(nw?nw.maj:'—');
+  buildJournees();
+  fillModelView();
+}).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });
 
 $('go').addEventListener('click', predict);
 $('swap').addEventListener('click', () => {
-  const h = $('home').value; $('home').value = $('away').value; $('away').value = h;
-  if($('board').style.display === 'block') predict();
+  const h=$('home').value; $('home').value=$('away').value; $('away').value=h;
+  if($('board').style.display==='block') predict();
 });
 </script>
 </body>

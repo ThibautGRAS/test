@@ -31,7 +31,9 @@
    "forme5": 0.8,
    "dernier_match": "2023-06-03",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Amiens": {
    "attaque": -0.2458,
@@ -40,7 +42,9 @@
    "forme5": 0.6,
    "dernier_match": "2020-03-06",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Angers": {
    "attaque": -0.1506,
@@ -49,7 +53,9 @@
    "forme5": 0.6,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.701,
+   "regularite": 0.51
   },
   "Auxerre": {
    "attaque": 0.0594,
@@ -58,7 +64,9 @@
    "forme5": 2.0,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.425,
+   "regularite": 0.678
   },
   "Bastia": {
    "attaque": -1.3505,
@@ -67,7 +75,9 @@
    "forme5": 1.2,
    "dernier_match": "2017-05-20",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Bordeaux": {
    "attaque": 0.0979,
@@ -76,7 +86,9 @@
    "forme5": 0.8,
    "dernier_match": "2022-05-21",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Brest": {
    "attaque": 0.2345,
@@ -85,7 +97,9 @@
    "forme5": 0.4,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.696,
+   "regularite": 0.41
   },
   "Caen": {
    "attaque": -0.5147,
@@ -94,7 +108,9 @@
    "forme5": 1.4,
    "dernier_match": "2019-05-24",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Clermont": {
    "attaque": -0.1353,
@@ -103,7 +119,9 @@
    "forme5": 0.6,
    "dernier_match": "2024-05-19",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Dijon": {
    "attaque": -0.2584,
@@ -112,7 +130,9 @@
    "forme5": 0.6,
    "dernier_match": "2021-05-23",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Guingamp": {
    "attaque": -0.2018,
@@ -121,7 +141,9 @@
    "forme5": 0.6,
    "dernier_match": "2019-05-24",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Le Havre": {
    "attaque": -0.0241,
@@ -130,7 +152,9 @@
    "forme5": 1.2,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.258,
+   "regularite": 1.0
   },
   "Lens": {
    "attaque": 0.3876,
@@ -139,7 +163,9 @@
    "forme5": 1.6,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.915,
+   "regularite": 0.263
   },
   "Lille": {
    "attaque": 0.3202,
@@ -148,7 +174,9 @@
    "forme5": 1.6,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 2.061,
+   "regularite": 0.196
   },
   "Lorient": {
    "attaque": 0.1931,
@@ -157,7 +185,9 @@
    "forme5": 1.4,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 2.049,
+   "regularite": 0.529
   },
   "Lyon": {
    "attaque": 0.4642,
@@ -166,7 +196,9 @@
    "forme5": 1.8,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.534,
+   "regularite": 0.096
   },
   "Marseille": {
    "attaque": 0.4989,
@@ -175,7 +207,9 @@
    "forme5": 1.4,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 2.076,
+   "regularite": 0.0
   },
   "Metz": {
    "attaque": -0.09,
@@ -184,7 +218,9 @@
    "forme5": 0.4,
    "dernier_match": "2026-05-17",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.618,
+   "regularite": 1.0
   },
   "Monaco": {
    "attaque": 0.5263,
@@ -193,7 +229,9 @@
    "forme5": 1.0,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.723,
+   "regularite": 0.015
   },
   "Montpellier": {
    "attaque": 0.0792,
@@ -202,7 +240,9 @@
    "forme5": 0.2,
    "dernier_match": "2025-05-17",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Nancy": {
    "attaque": -1.313,
@@ -211,7 +251,9 @@
    "forme5": 0.8,
    "dernier_match": "2017-05-20",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Nantes": {
    "attaque": -0.0522,
@@ -220,7 +262,9 @@
    "forme5": 0.8,
    "dernier_match": "2026-05-08",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.425,
+   "regularite": 1.0
   },
   "Nice": {
    "attaque": 0.2157,
@@ -229,7 +273,9 @@
    "forme5": 0.8,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.778,
+   "regularite": 0.863
   },
   "Nimes": {
    "attaque": -0.0094,
@@ -238,7 +284,9 @@
    "forme5": 0.8,
    "dernier_match": "2021-05-23",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Paris FC": {
    "attaque": 0.2634,
@@ -247,7 +295,9 @@
    "forme5": 1.8,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.669,
+   "regularite": 0.461
   },
   "Paris SG": {
    "attaque": 0.7763,
@@ -256,7 +306,9 @@
    "forme5": 2.0,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.778,
+   "regularite": 0.586
   },
   "Reims": {
    "attaque": -0.0176,
@@ -265,7 +317,9 @@
    "forme5": 0.8,
    "dernier_match": "2025-05-17",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Rennes": {
    "attaque": 0.4223,
@@ -274,7 +328,9 @@
    "forme5": 1.8,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 2.091,
+   "regularite": 0.233
   },
   "St Etienne": {
    "attaque": 0.0718,
@@ -283,7 +339,9 @@
    "forme5": 1.2,
    "dernier_match": "2025-05-17",
    "actif": false,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Strasbourg": {
    "attaque": 0.3287,
@@ -292,7 +350,9 @@
    "forme5": 2.0,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.604,
+   "regularite": 0.164
   },
   "Toulouse": {
    "attaque": 0.1859,
@@ -301,7 +361,9 @@
    "forme5": 1.4,
    "dernier_match": "2026-05-10",
    "actif": true,
-   "promu": false
+   "promu": false,
+   "volatilite": 1.766,
+   "regularite": 0.215
   },
   "Troyes": {
    "attaque": -0.0629,
@@ -310,7 +372,9 @@
    "forme5": 0.4,
    "dernier_match": "2023-06-03",
    "actif": true,
-   "promu": true
+   "promu": true,
+   "volatilite": 1.9,
+   "regularite": 0.164
   },
   "Le Mans": {
    "attaque": -0.0306,
@@ -320,7 +384,9 @@
    "dernier_match": "",
    "actif": true,
    "promu": true,
-   "prior": "promu (moyenne clubs modestes - malus)"
+   "prior": "promu (moyenne clubs modestes - malus)",
+   "volatilite": 1.9,
+   "regularite": 0.164
   }
  },
  "blend": {

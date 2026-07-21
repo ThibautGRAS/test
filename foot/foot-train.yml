@@ -1,0 +1,22 @@
+name: Réentraînement Génie du Foot
+on:
+  schedule:
+    - cron: '0 5 * * 2'   # tous les mardis 05:00 UTC
+  workflow_dispatch:
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install numpy scipy pandas
+      - run: python3 foot/train.py     # télécharge football-data.co.uk et régénère foot/model.json
+      - run: |
+          git config user.name "genie-foot-bot"
+          git config user.email "actions@github.com"
+          git add foot/model.json
+          git diff --cached --quiet || git commit -m "maj auto model.json"
+          git push

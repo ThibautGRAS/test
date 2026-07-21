@@ -1,7 +1,7 @@
 {
  "maj": "2026-07-21",
  "source": "presse spécialisée (Maxifoot, Foot Mercato, L1.com, Lensois.com, Le Petit Lillois, Wikipédia), juillet 2026",
- "note": "Ajustements modérés (±0,03 à ±0,08 sur l'échelle log des forces), sourcés ci-dessous. Mercato ouvert jusqu'au 1er septembre : signaux susceptibles d'évoluer. Coupe du monde achevée le 19 juillet — retours tardifs d'internationaux en début de saison.",
+ "note": "Ajustements modérés (±0,03 à ±0,08 sur l'échelle log des forces), sourcés ci-dessous. Mercato ouvert jusqu'au 1er septembre : signaux susceptibles d'évoluer. Coupe du monde achevée le 19 juillet — retours tardifs d'internationaux en début de saison. Les clubs européens (7 cette saison) enchaînent les semaines à trois matchs : fatigue non modélisée match par match, signalée dans les commentaires.",
  "equipes": {
   "Paris SG": {
    "att": -0.03,
@@ -113,6 +113,56 @@
     "Feu vert DNCG sans restriction, fonds Outfield au capital",
     "Risque de descente assumé publiquement, aucune arrivée au 21/07"
    ]
+  }
+ },
+ "contexte": {
+  "Paris SG": {
+   "europe": "Ligue des champions",
+   "banc": "stable (Luis Enrique depuis 2023)"
+  },
+  "Lens": {
+   "europe": "Ligue des champions",
+   "banc": "en poste depuis juin 2025 — saison pleinement réussie"
+  },
+  "Lille": {
+   "europe": "Ligue des champions",
+   "banc": "stable"
+  },
+  "Lyon": {
+   "europe": "Ligue des champions",
+   "banc": "stable"
+  },
+  "Marseille": {
+   "europe": "Europa League",
+   "banc": "nouveau coach depuis février 2026"
+  },
+  "Rennes": {
+   "europe": "Europa League",
+   "banc": "nouveau coach depuis février 2026"
+  },
+  "Monaco": {
+   "europe": "Ligue Conférence",
+   "banc": "coach en poste depuis octobre 2025"
+  },
+  "Nice": {
+   "europe": null,
+   "banc": "coach en poste depuis décembre 2025"
+  },
+  "Strasbourg": {
+   "europe": null,
+   "banc": "coach en poste depuis janvier 2026 (prédécesseur parti à Chelsea)"
+  },
+  "Paris FC": {
+   "europe": null,
+   "banc": "Kombouaré depuis février 2026"
+  },
+  "Troyes": {
+   "europe": null,
+   "banc": "staff de la montée conservé"
+  },
+  "Le Mans": {
+   "europe": null,
+   "banc": "staff de la montée conservé"
   }
  }
 }

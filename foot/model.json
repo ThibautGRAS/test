@@ -18,7 +18,8 @@
   "xi": 0.001,
   "demi_vie_jours": 693,
   "elo_home": 60.0,
-  "max_goals": 8
+  "max_goals": 8,
+  "saison_cible": "2026-27"
  },
  "gamma": 0.20369461057728808,
  "rho": -0.0440858288917294,
@@ -156,7 +157,7 @@
    "forme5": 1.4,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": true
+   "promu": false
   },
   "Lyon": {
    "attaque": 0.4642,
@@ -182,8 +183,8 @@
    "elo": 1309.8,
    "forme5": 0.4,
    "dernier_match": "2026-05-17",
-   "actif": true,
-   "promu": true
+   "actif": false,
+   "promu": false
   },
   "Monaco": {
    "attaque": 0.5263,
@@ -218,7 +219,7 @@
    "elo": 1405.8,
    "forme5": 0.8,
    "dernier_match": "2026-05-08",
-   "actif": true,
+   "actif": false,
    "promu": false
   },
   "Nice": {
@@ -246,7 +247,7 @@
    "forme5": 1.8,
    "dernier_match": "2026-05-17",
    "actif": true,
-   "promu": true
+   "promu": false
   },
   "Paris SG": {
    "attaque": 0.7763,
@@ -308,8 +309,18 @@
    "elo": 1303.9,
    "forme5": 0.4,
    "dernier_match": "2023-06-03",
-   "actif": false,
-   "promu": false
+   "actif": true,
+   "promu": true
+  },
+  "Le Mans": {
+   "attaque": -0.0306,
+   "defense": -0.0865,
+   "elo": 1450.0,
+   "forme5": 1.0,
+   "dernier_match": "",
+   "actif": true,
+   "promu": true,
+   "prior": "promu (moyenne clubs modestes - malus)"
   }
  },
  "blend": {

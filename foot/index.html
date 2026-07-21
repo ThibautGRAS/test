@@ -175,9 +175,10 @@ footer{font-size:10px;color:var(--muted);line-height:1.5;margin-top:16px}
 </header>
 
 <nav>
-  <button id="nav-j" class="on">Saison 26-27</button>
-  <button id="nav-s">Simulateur</button>
-  <button id="nav-m">Modèle & actu</button>
+  <button id="nav-j" class="on">26-27</button>
+  <button id="nav-s">Simu</button>
+  <button id="nav-c">Classement</button>
+  <button id="nav-m">Modèle</button>
 </nav>
 
 <!-- ============ VUE JOURNÉES ============ -->
@@ -244,6 +245,18 @@ footer{font-size:10px;color:var(--muted);line-height:1.5;margin-top:16px}
       </div>
       <div class="tops" id="tops"></div>
     </div>
+  </div>
+</div>
+
+<!-- ============ VUE CLASSEMENT PROJETÉ ============ -->
+<div class="view" id="view-c">
+  <div class="card">
+    <h2>Classement final projeté — 5 000 saisons simulées</h2>
+    <table class="bt" id="proj"></table>
+    <div class="hint">Monte-Carlo : chaque saison est simulée match par match en tirant les
+      scores dans les matrices Dixon-Coles ajustées (Elo + signal actu). xPts = points moyens.
+      Titre / Top 4 (C1) / Relégation (17-18e directes, la 16e joue un barrage).
+      Fiabilité maximale à mi-saison, quand les vrais résultats auront recalé le modèle.</div>
   </div>
 </div>
 
@@ -350,6 +363,10 @@ function comment(h, a, P, opts){
       const e = NEWS.equipes[t];
       if(e && e.titres.length && (e.att!==0 || e.def!==0))
         out.push('📰 '+t+' : '+e.titres[0]+'.');
+      const c = NEWS.contexte && NEWS.contexte[t];
+      if(c && c.europe) out.push(t+' enchaîne avec la '+c.europe+'.');
+      if(c && /depuis (octobre|novembre|décembre|janvier|février) 202[56]/.test(c.banc))
+        out.push('Banc récent à '+t+' ('+c.banc+').');
     });
   }
   return out.join(' ');
@@ -512,6 +529,64 @@ function render(h, a, P){
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
 }
 
+/* ---------- classement projeté (Monte-Carlo) ---------- */
+let rngState = 42;
+function rng(){ // xorshift32 — reproductible
+  rngState ^= rngState << 13; rngState ^= rngState >>> 17; rngState ^= rngState << 5;
+  return ((rngState >>> 0) / 4294967296);
+}
+function simulateSeason(nSims){
+  const teams = Object.keys(M.equipes).filter(t => M.equipes[t].actif).sort();
+  const ti = Object.fromEntries(teams.map((t,i)=>[t,i]));
+  const nT = teams.length, n = M.meta.max_goals, k = n+1;
+  // pré-calcul des CDF de chaque match (matrice recalée par le blend)
+  const cdfs = FIX.fixtures.map(f => {
+    const p = computeMatch(f.h, f.a, {rh:f.rh||7, ra:f.ra||7});
+    const cdf = new Float64Array(k*k); let c = 0, idx = 0;
+    for(let i=0;i<k;i++) for(let j=0;j<k;j++){ c += p.X[i][j]; cdf[idx++] = c; }
+    return {hi: ti[f.h], ai: ti[f.a], cdf};
+  });
+  const agg = teams.map(() => ({pts:0, titre:0, top4:0, top7:0, rel:0, bar:0, rk:0}));
+  const pts = new Float64Array(nT), gd = new Float64Array(nT), gf = new Float64Array(nT);
+  for(let s=0; s<nSims; s++){
+    pts.fill(0); gd.fill(0); gf.fill(0);
+    for(const m of cdfs){
+      const u = rng(); let lo=0, hi=m.cdf.length-1;
+      while(lo<hi){ const mid=(lo+hi)>>1; if(m.cdf[mid]<u) lo=mid+1; else hi=mid; }
+      const gh=(lo/k)|0, ga=lo%k;
+      gd[m.hi]+=gh-ga; gd[m.ai]+=ga-gh; gf[m.hi]+=gh; gf[m.ai]+=ga;
+      if(gh>ga) pts[m.hi]+=3; else if(gh<ga) pts[m.ai]+=3; else {pts[m.hi]++; pts[m.ai]++;}
+    }
+    const order = teams.map((_,i)=>i).sort((x,y)=>
+      pts[y]-pts[x] || gd[y]-gd[x] || gf[y]-gf[x]);
+    order.forEach((t,pos)=>{
+      const a=agg[t]; a.pts+=pts[t]; a.rk+=pos+1;
+      if(pos===0)a.titre++; if(pos<4)a.top4++; if(pos<7)a.top7++;
+      if(pos>=nT-2)a.rel++; if(pos===nT-3)a.bar++;
+    });
+  }
+  return teams.map((t,i)=>({t, xpts:agg[i].pts/nSims, xrk:agg[i].rk/nSims,
+    titre:agg[i].titre/nSims, top4:agg[i].top4/nSims, top7:agg[i].top7/nSims,
+    rel:agg[i].rel/nSims, bar:agg[i].bar/nSims}))
+    .sort((a,b)=>b.xpts-a.xpts);
+}
+function fillProjection(){
+  const N = 5000;
+  const res = simulateSeason(N);
+  const fp = x => x<0.001 ? '—' : x<0.01 ? '<1%' : Math.round(100*x)+'%';
+  $('proj').innerHTML = '<tr><th>#</th><th style="text-align:left">Club</th>'+
+    '<th>xPts</th><th>Titre</th><th>Top 4</th><th>Relég.</th></tr>' +
+    res.map((r,i) => {
+      const cls = i===0?'win':(i>=res.length-2?'':''); 
+      const rel = r.rel>0.25 ? ' style="color:var(--bad)"' : '';
+      return '<tr><td>'+(i+1)+'</td><td style="text-align:left">'+r.t+
+        (M.equipes[r.t].promu?' <span class="badge">promu</span>':'')+'</td>'+
+        '<td>'+r.xpts.toFixed(0)+'</td>'+
+        '<td class="'+(r.titre>0.3?'win':'')+'">'+fp(r.titre)+'</td>'+
+        '<td>'+fp(r.top4)+'</td><td'+rel+'>'+fp(r.rel)+'</td></tr>';
+    }).join('');
+}
+
 /* ---------- modèle & actu ---------- */
 function fillModelView(){
   $('newsnote').textContent = NEWS ? NEWS.note + ' Maj : ' + NEWS.maj + ' — ' + NEWS.source : 'signal actu indisponible';
@@ -534,12 +609,12 @@ function fillModelView(){
 
 /* ---------- navigation ---------- */
 function switchView(v){
-  ['j','s','m'].forEach(k => {
+  ['j','s','c','m'].forEach(k => {
     $('view-'+k).classList.toggle('on', k===v);
     $('nav-'+k).classList.toggle('on', k===v);
   });
 }
-['j','s','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
+['j','s','c','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
 
 /* ---------- init ---------- */
 Promise.all([
@@ -560,6 +635,7 @@ Promise.all([
   buildRanks();
   buildJournees();
   fillModelView();
+  setTimeout(fillProjection, 50);
 }).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });
 
 $('usenews').addEventListener('click', () => {

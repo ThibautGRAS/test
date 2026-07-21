@@ -17,3 +17,14 @@ App : https://thibautgras.github.io/test/foot/
 
 L'app fait toute l'inférence côté client (matrice de scores, 1N2 calibré, over/under,
 BTTS) à partir du seul `model.json`.
+
+## v2 — Saison 2026-27
+- **Vue par journée** : les 34 journées du calendrier officiel (306 matchs, source
+  openfootball) avec score prédit (case la plus probable dans l'issue 1N2 dominante),
+  sa probabilité, et le 1N2 calibré. Repos entre journées calculé depuis le calendrier.
+- **Signal actu** (`news.json`) : ajustements modérés attaque/défense par club issus de
+  la presse mercato (départs Greenwood/Aubameyang à l'OM, investissements Paris FC,
+  budget contraint du Mans…), sourcés et affichés dans l'onglet « Modèle & actu ».
+  Mis à jour à la demande via Claude — le réentraînement hebdo ne l'écrase pas.
+- Le Mans (sans historique L1 récent) reçoit un prior de promu ; `train.py` le
+  régénère automatiquement tant que l'équipe est au calendrier.

@@ -1,0 +1,390 @@
+{
+ "meta": {
+  "genere": "2026-07-21 19:37 UTC",
+  "n_matchs": 3476,
+  "saisons": [
+   "1617",
+   "1718",
+   "1819",
+   "1920",
+   "2021",
+   "2122",
+   "2223",
+   "2324",
+   "2425",
+   "2526"
+  ],
+  "derniere_date": "2026-05-17",
+  "xi": 0.001,
+  "demi_vie_jours": 693,
+  "elo_home": 60.0,
+  "max_goals": 8
+ },
+ "gamma": 0.20369461057728808,
+ "rho": -0.0440858288917294,
+ "equipes": {
+  "Ajaccio": {
+   "attaque": -0.6963,
+   "defense": -0.2879,
+   "elo": 1317.3,
+   "forme5": 0.8,
+   "dernier_match": "2023-06-03",
+   "actif": false,
+   "promu": false
+  },
+  "Amiens": {
+   "attaque": -0.2458,
+   "defense": 0.0203,
+   "elo": 1370.9,
+   "forme5": 0.6,
+   "dernier_match": "2020-03-06",
+   "actif": false,
+   "promu": false
+  },
+  "Angers": {
+   "attaque": -0.1506,
+   "defense": -0.0486,
+   "elo": 1428.1,
+   "forme5": 0.6,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Auxerre": {
+   "attaque": 0.0594,
+   "defense": 0.0463,
+   "elo": 1533.7,
+   "forme5": 2.0,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Bastia": {
+   "attaque": -1.3505,
+   "defense": 0.201,
+   "elo": 1387.0,
+   "forme5": 1.2,
+   "dernier_match": "2017-05-20",
+   "actif": false,
+   "promu": false
+  },
+  "Bordeaux": {
+   "attaque": 0.0979,
+   "defense": -0.1884,
+   "elo": 1379.0,
+   "forme5": 0.8,
+   "dernier_match": "2022-05-21",
+   "actif": false,
+   "promu": false
+  },
+  "Brest": {
+   "attaque": 0.2345,
+   "defense": -0.04,
+   "elo": 1501.5,
+   "forme5": 0.4,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Caen": {
+   "attaque": -0.5147,
+   "defense": -0.0235,
+   "elo": 1356.0,
+   "forme5": 1.4,
+   "dernier_match": "2019-05-24",
+   "actif": false,
+   "promu": false
+  },
+  "Clermont": {
+   "attaque": -0.1353,
+   "defense": -0.0987,
+   "elo": 1409.0,
+   "forme5": 0.6,
+   "dernier_match": "2024-05-19",
+   "actif": false,
+   "promu": false
+  },
+  "Dijon": {
+   "attaque": -0.2584,
+   "defense": -0.1899,
+   "elo": 1300.5,
+   "forme5": 0.6,
+   "dernier_match": "2021-05-23",
+   "actif": false,
+   "promu": false
+  },
+  "Guingamp": {
+   "attaque": -0.2018,
+   "defense": -0.1417,
+   "elo": 1355.8,
+   "forme5": 0.6,
+   "dernier_match": "2019-05-24",
+   "actif": false,
+   "promu": false
+  },
+  "Le Havre": {
+   "attaque": -0.0241,
+   "defense": -0.0417,
+   "elo": 1485.0,
+   "forme5": 1.2,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Lens": {
+   "attaque": 0.3876,
+   "defense": 0.2872,
+   "elo": 1705.4,
+   "forme5": 1.6,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Lille": {
+   "attaque": 0.3202,
+   "defense": 0.3083,
+   "elo": 1691.8,
+   "forme5": 1.6,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Lorient": {
+   "attaque": 0.1931,
+   "defense": -0.102,
+   "elo": 1538.4,
+   "forme5": 1.4,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": true
+  },
+  "Lyon": {
+   "attaque": 0.4642,
+   "defense": 0.0931,
+   "elo": 1649.4,
+   "forme5": 1.8,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Marseille": {
+   "attaque": 0.4989,
+   "defense": 0.1221,
+   "elo": 1638.4,
+   "forme5": 1.4,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Metz": {
+   "attaque": -0.09,
+   "defense": -0.2705,
+   "elo": 1309.8,
+   "forme5": 0.4,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": true
+  },
+  "Monaco": {
+   "attaque": 0.5263,
+   "defense": 0.0425,
+   "elo": 1636.8,
+   "forme5": 1.0,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Montpellier": {
+   "attaque": 0.0792,
+   "defense": -0.1871,
+   "elo": 1298.4,
+   "forme5": 0.2,
+   "dernier_match": "2025-05-17",
+   "actif": false,
+   "promu": false
+  },
+  "Nancy": {
+   "attaque": -1.313,
+   "defense": 0.3613,
+   "elo": 1375.6,
+   "forme5": 0.8,
+   "dernier_match": "2017-05-20",
+   "actif": false,
+   "promu": false
+  },
+  "Nantes": {
+   "attaque": -0.0522,
+   "defense": -0.0153,
+   "elo": 1405.8,
+   "forme5": 0.8,
+   "dernier_match": "2026-05-08",
+   "actif": true,
+   "promu": false
+  },
+  "Nice": {
+   "attaque": 0.2157,
+   "defense": 0.1174,
+   "elo": 1487.2,
+   "forme5": 0.8,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Nimes": {
+   "attaque": -0.0094,
+   "defense": -0.1749,
+   "elo": 1422.1,
+   "forme5": 0.8,
+   "dernier_match": "2021-05-23",
+   "actif": false,
+   "promu": false
+  },
+  "Paris FC": {
+   "attaque": 0.2634,
+   "defense": 0.0386,
+   "elo": 1572.8,
+   "forme5": 1.8,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": true
+  },
+  "Paris SG": {
+   "attaque": 0.7763,
+   "defense": 0.3891,
+   "elo": 1825.6,
+   "forme5": 2.0,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Reims": {
+   "attaque": -0.0176,
+   "defense": 0.1286,
+   "elo": 1436.0,
+   "forme5": 0.8,
+   "dernier_match": "2025-05-17",
+   "actif": false,
+   "promu": false
+  },
+  "Rennes": {
+   "attaque": 0.4223,
+   "defense": 0.081,
+   "elo": 1655.1,
+   "forme5": 1.8,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "St Etienne": {
+   "attaque": 0.0718,
+   "defense": -0.2888,
+   "elo": 1418.4,
+   "forme5": 1.2,
+   "dernier_match": "2025-05-17",
+   "actif": false,
+   "promu": false
+  },
+  "Strasbourg": {
+   "attaque": 0.3287,
+   "defense": 0.0413,
+   "elo": 1632.1,
+   "forme5": 2.0,
+   "dernier_match": "2026-05-17",
+   "actif": true,
+   "promu": false
+  },
+  "Toulouse": {
+   "attaque": 0.1859,
+   "defense": 0.0457,
+   "elo": 1573.2,
+   "forme5": 1.4,
+   "dernier_match": "2026-05-10",
+   "actif": true,
+   "promu": false
+  },
+  "Troyes": {
+   "attaque": -0.0629,
+   "defense": -0.2278,
+   "elo": 1303.9,
+   "forme5": 0.4,
+   "dernier_match": "2023-06-03",
+   "actif": false,
+   "promu": false
+  }
+ },
+ "blend": {
+  "W": [
+   [
+    0.2799,
+    0.04262,
+    0.37613,
+    0.66928,
+    -0.52904,
+    -0.59653,
+    0.19411,
+    -0.0197,
+    0.04136,
+    -0.04715,
+    -0.0139
+   ],
+   [
+    -0.06355,
+    0.11357,
+    0.02409,
+    -0.27817,
+    0.44809,
+    -0.24753,
+    -0.05382,
+    0.02534,
+    -0.17453,
+    -0.05951,
+    -0.08595
+   ],
+   [
+    -0.21635,
+    -0.15618,
+    -0.40022,
+    -0.39111,
+    0.08096,
+    0.84406,
+    -0.14029,
+    -0.00564,
+    0.13317,
+    0.10666,
+    0.09985
+   ]
+  ],
+  "features": [
+   "log_pH_dc",
+   "log_pD_dc",
+   "log_pA_dc",
+   "log_pH_mkt",
+   "log_pD_mkt",
+   "log_pA_mkt",
+   "mkt_dispo",
+   "elo_diff_100",
+   "repos_diff_3",
+   "forme_diff_3",
+   "promu_diff"
+  ]
+ },
+ "backtest": {
+  "dixon_coles": {
+   "logloss": 1.0008,
+   "rps": 0.2085,
+   "accuracy": 0.5225
+  },
+  "blend": {
+   "logloss": 0.9964,
+   "rps": 0.2052,
+   "accuracy": 0.5214
+  },
+  "marche": {
+   "logloss": 0.9813,
+   "rps": 0.203,
+   "accuracy": 0.5302
+  },
+  "score_exact_pct": 11.86,
+  "n_matchs_eval": 911
+ }
+}

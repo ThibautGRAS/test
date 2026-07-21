@@ -395,6 +395,33 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
     <div id="newslist" style="margin-top:8px"></div>
   </div>
   <div class="card">
+    <h2>⚡ L'indice de chaos</h2>
+    <div class="hint" style="margin-top:0">
+      Mesure la probabilité qu'un match déjoue le pronostic — sans modifier les probabilités,
+      c'est une couche de lecture au-dessus du modèle.<br><br>
+      <b style="color:var(--line)">Formule : chaos = 0,55 × entropie + 0,45 × irrégularité.</b><br><br>
+      <b style="color:var(--line)">Entropie</b> — incertitude du 1N2 calibré
+      (−Σ p·ln p / ln 3) : trois issues à 33/33/33 donnent 1 (incertitude maximale),
+      un PSG à 90 % de victoire tombe vers 0,4. C'est la part « l'issue est-elle ouverte ? ».<br><br>
+      <b style="color:var(--line)">Irrégularité</b> — écart-type des points match par match
+      (0/1/3) de chaque club en 2025-26, normalisé sur le plateau puis inversé, moyenné sur les
+      deux équipes. Une équipe constante (Le Havre, régularité 1,0) est prévisible ; une équipe
+      qui alterne cartons et naufrages (Marseille 0,0 · Monaco 0,01 · Lyon 0,10) est un terreau
+      à upset. Les points sont préférés à la différence de buts, qui pénalisait à tort les gros
+      (gagner 5-0 puis 1-0 = volatile en buts, régulier en résultats).<br><br>
+      <b style="color:var(--line)">Calibration</b> — l'entropie d'un match de foot étant
+      naturellement haute (le nul existe toujours), l'affichage est rééchelonné sur 0-100 et le
+      seuil « match piégeux » fixé au quantile 70 % du calendrier : ~30 % des 306 matchs
+      déclenchent la ligne ⚡. Le scénario surprise est alors le score le plus probable
+      <i>dans l'issue inverse</i>, avec sa probabilité réelle — un upset à 8 % reste affiché à 8 %.<br><br>
+      Validation empirique : les 5 matchs les plus chaotiques de la saison sont les
+      confrontations OM-Monaco-Lyon entre elles ; le plus verrouillé est PSG-Le Havre
+      (le plus fort contre le plus régulier). Les poids 55/45 sont un choix assumé,
+      recalibrable en fin de saison en vérifiant si les matchs « chaos &gt; 80 » produisent
+      réellement plus d'upsets.
+    </div>
+  </div>
+  <div class="card">
     <h2>Backtest 3 saisons (2023-24 → 2025-26)</h2>
     <table class="bt" id="bt"></table>
     <div class="hint" id="btnote"></div>

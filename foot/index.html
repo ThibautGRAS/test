@@ -305,7 +305,7 @@ function fillValidation(){
   // tendances
   $('vtrends').innerHTML =
     '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 3/3 (PSG) : le sommet '+
-    'est prévisible. La corrélation des rangs progresse (ρ 0,64 → 0,67 → 0,74) et le taux de '+
+    'est prévisible. La corrélation des rangs progresse (ρ 0,66 → 0,70 → 0,75) et le taux de '+
     'scores exacts reste stable (10-13 %), au niveau de l\'état de l\'art. Le chaos est validé : '+
     '+3 pts de favoris battus et +0,06 de log-loss dans le tiers irrégulier.<br><br>'+
     '<b style="color:var(--line)">Le point aveugle récurrent.</b> Le modèle d\'avant-saison rate '+
@@ -315,14 +315,53 @@ function fillValidation(){
     'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
     'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
     '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
-    '1) Ratings sur tirs cadrés (proxy xG, colonnes déjà dans nos données) — moins bruités que '+
-    'les buts. 2) Avantage domicile par équipe avec rétrécissement vers la moyenne. '+
+    '1) <s>Ratings sur tirs cadrés</s> et 2) <s>avantage domicile par équipe</s> : intégrés (v3) — '+
+    'gain net de log-loss (0,9964 → 0,9953) et de corrélation des rangs, au prix d\'un léger '+
+    'recul du score exact (11,9 → 10,7 %), la fusion lissant les buts espérés. '+
     '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
     'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
     'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+
     'Dixon-Coles pur (0,985 vs 0,974), faute d\'historique d\'entraînement — il se renforce '+
     'mécaniquement chaque saison. Le marché reste devant partout (compos et blessures en temps '+
     'réel) : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
+}
+
+/* ---------- distribution des totaux (validation) ---------- */
+let curDTeam = 'Toutes';
+function drawDist(){
+  const D = M.validation && M.validation.dist_buts; if(!D) return;
+  const re = D.reel[curDTeam], mo = D.modele[curDTeam];
+  if(!re){ curDTeam='Toutes'; return drawDist(); }
+  const mx = Math.max(...re, ...mo);
+  $('dgraph').innerHTML = re.map((rv,k) => {
+    const mv = mo[k];
+    const lbl = k < D.kmax ? k : D.kmax+'+';
+    return '<div class="gbar" style="grid-template-columns:34px 1fr 1fr">'+
+      '<span class="nm">'+lbl+'&nbsp;<span style="color:var(--muted);font-weight:400">buts</span></span>'+
+      '<span class="tr"><span class="fl" style="width:'+Math.max(2,100*rv/mx)+'%"></span></span>'+
+      '<span class="tr"><span class="fl" style="width:'+Math.max(2,100*mv/mx)+'%;background:linear-gradient(90deg,#2F6B47,#49A468);box-shadow:0 0 10px rgba(73,164,104,.25)"></span></span>'+
+      '</div>';
+  }).join('') +
+  '<div style="display:grid;grid-template-columns:34px 1fr 1fr;gap:8px;font-size:9px;color:var(--muted);margin-top:4px">'+
+  '<span></span><span>■ réel (ambre)</span><span>■ modèle (vert)</span></div>';
+  $('dnote').textContent = curDTeam==='Toutes'
+    ? 'Backtest 2023-26 ('+D.n['Toutes']+' matchs) : le modèle reproduit fidèlement la distribution réelle — 3 buts : '+
+      (100*mo[3]).toFixed(1)+'% prédit vs '+(100*re[3]).toFixed(1)+'% observé. Le score affiché sur une carte est le mode de la matrice, forcément prudent ; la distribution complète, elle, est calibrée.'
+    : curDTeam+' : '+D.n[curDTeam]+' matchs dans le backtest. Réel vs espérance du modèle sur ces rencontres.';
+}
+function buildDist(){
+  const D = M.validation && M.validation.dist_buts; if(!D) return;
+  const teams = Object.keys(D.n).filter(t=>t!=='Toutes').sort();
+  $('dchips').innerHTML = ['Toutes'].concat(teams).map(t =>
+    '<button data-t="'+t+'"'+(t===curDTeam?' class="on"':'')+'>'+t+'</button>').join('');
+  $('dchips').addEventListener('click', e => {
+    if(!e.target.dataset.t) return;
+    curDTeam = e.target.dataset.t;
+    document.querySelectorAll('#dchips button').forEach(b =>
+      b.classList.toggle('on', b.dataset.t===curDTeam));
+    drawDist();
+  });
+  drawDist();
 }
 
 /* ---------- modèle & actu ---------- */
@@ -366,8 +405,10 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
   </div>
   <div class="jchips" id="jchips"></div>
   <div id="jlist"></div>
-  <div class="hint">Score affiché : le plus probable au sein de l'issue dominante du 1N2 calibré
-    (Dixon-Coles pondéré + Elo + signal actu 📰). Touche un match pour la matrice complète.</div>
+  <div class="hint">Score affiché : le plus probable au sein de l'issue retenue du 1N2 calibré
+    (Dixon-Coles buts + tirs cadrés, avantage domicile par équipe, Elo, signal actu 📰),
+    avec une marge en faveur du nul calibrée sur son taux historique (~25 %).
+    Touche un match pour la matrice complète.</div>
 </div>
 
 <!-- ============ VUE SIMULATEUR ============ -->
@@ -457,6 +498,12 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
     <div class="hint">Chaque saison est projetée avec le modèle d'avant-saison uniquement
       (2 000 simulations sur le calendrier réel), puis comparée au classement final.
       MAE = erreur moyenne en points ; ρ = corrélation de Spearman des rangs.</div>
+  </div>
+  <div class="card">
+    <h2>Distribution des totaux de buts — modèle vs réel</h2>
+    <div class="jchips" id="dchips"></div>
+    <div id="dgraph"></div>
+    <div class="hint" id="dnote"></div>
   </div>
   <div class="card">
     <h2>⚡ Chaos validé rétrospectivement</h2>
@@ -614,7 +661,7 @@ function computeMatch(h, a, opts){
   const th=M.equipes[h], ta=M.equipes[a];
   const nh = o.news ? newsAdj(h) : {att:0,def:0};
   const na = o.news ? newsAdj(a) : {att:0,def:0};
-  const lam = Math.exp((th.attaque+nh.att) - (ta.defense+na.def) + M.gamma);
+  const lam = Math.exp((th.attaque+nh.att) - (ta.defense+na.def) + M.gamma + (th.delta_dom||0));
   const mu  = Math.exp((ta.attaque+na.att) - (th.defense+nh.def));
   const n = M.meta.max_goals;
   const X = dcMatrix(lam, mu, M.rho, n);
@@ -639,8 +686,12 @@ function computeMatch(h, a, opts){
   let sum=0;
   for(let i=0;i<=n;i++) for(let j=0;j<=n;j++) sum+=X[i][j];
   for(let i=0;i<=n;i++) for(let j=0;j<=n;j++) X[i][j]/=sum;
-  // score prédit : case la plus probable AU SEIN de l'issue 1N2 dominante
-  const cls = pb.indexOf(Math.max(...pb));
+  // score prédit : case la plus probable au sein de l'issue retenue.
+  // Le nul, concentré sur peu de cases, est structurellement défavorisé par
+  // l'argmax de classe : marge de tolérance 0,16 calibrée pour retrouver le
+  // taux de nuls historique (~25 %) sur le calendrier.
+  const mxHA = Math.max(pb[0], pb[2]);
+  const cls = (pb[1] >= mxHA - 0.16) ? 1 : (pb[0] > pb[2] ? 0 : 2);
   let bi=0,bj=0,bp=0;
   for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
     const c = i>j?0:(i===j?1:2);
@@ -944,7 +995,7 @@ function fillValidation(){
   // tendances
   $('vtrends').innerHTML =
     '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 3/3 (PSG) : le sommet '+
-    'est prévisible. La corrélation des rangs progresse (ρ 0,64 → 0,67 → 0,74) et le taux de '+
+    'est prévisible. La corrélation des rangs progresse (ρ 0,66 → 0,70 → 0,75) et le taux de '+
     'scores exacts reste stable (10-13 %), au niveau de l\'état de l\'art. Le chaos est validé : '+
     '+3 pts de favoris battus et +0,06 de log-loss dans le tiers irrégulier.<br><br>'+
     '<b style="color:var(--line)">Le point aveugle récurrent.</b> Le modèle d\'avant-saison rate '+
@@ -954,14 +1005,53 @@ function fillValidation(){
     'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
     'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
     '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
-    '1) Ratings sur tirs cadrés (proxy xG, colonnes déjà dans nos données) — moins bruités que '+
-    'les buts. 2) Avantage domicile par équipe avec rétrécissement vers la moyenne. '+
+    '1) <s>Ratings sur tirs cadrés</s> et 2) <s>avantage domicile par équipe</s> : intégrés (v3) — '+
+    'gain net de log-loss (0,9964 → 0,9953) et de corrélation des rangs, au prix d\'un léger '+
+    'recul du score exact (11,9 → 10,7 %), la fusion lissant les buts espérés. '+
     '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
     'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
     'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+
     'Dixon-Coles pur (0,985 vs 0,974), faute d\'historique d\'entraînement — il se renforce '+
     'mécaniquement chaque saison. Le marché reste devant partout (compos et blessures en temps '+
     'réel) : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
+}
+
+/* ---------- distribution des totaux (validation) ---------- */
+let curDTeam = 'Toutes';
+function drawDist(){
+  const D = M.validation && M.validation.dist_buts; if(!D) return;
+  const re = D.reel[curDTeam], mo = D.modele[curDTeam];
+  if(!re){ curDTeam='Toutes'; return drawDist(); }
+  const mx = Math.max(...re, ...mo);
+  $('dgraph').innerHTML = re.map((rv,k) => {
+    const mv = mo[k];
+    const lbl = k < D.kmax ? k : D.kmax+'+';
+    return '<div class="gbar" style="grid-template-columns:34px 1fr 1fr">'+
+      '<span class="nm">'+lbl+'&nbsp;<span style="color:var(--muted);font-weight:400">buts</span></span>'+
+      '<span class="tr"><span class="fl" style="width:'+Math.max(2,100*rv/mx)+'%"></span></span>'+
+      '<span class="tr"><span class="fl" style="width:'+Math.max(2,100*mv/mx)+'%;background:linear-gradient(90deg,#2F6B47,#49A468);box-shadow:0 0 10px rgba(73,164,104,.25)"></span></span>'+
+      '</div>';
+  }).join('') +
+  '<div style="display:grid;grid-template-columns:34px 1fr 1fr;gap:8px;font-size:9px;color:var(--muted);margin-top:4px">'+
+  '<span></span><span>■ réel (ambre)</span><span>■ modèle (vert)</span></div>';
+  $('dnote').textContent = curDTeam==='Toutes'
+    ? 'Backtest 2023-26 ('+D.n['Toutes']+' matchs) : le modèle reproduit fidèlement la distribution réelle — 3 buts : '+
+      (100*mo[3]).toFixed(1)+'% prédit vs '+(100*re[3]).toFixed(1)+'% observé. Le score affiché sur une carte est le mode de la matrice, forcément prudent ; la distribution complète, elle, est calibrée.'
+    : curDTeam+' : '+D.n[curDTeam]+' matchs dans le backtest. Réel vs espérance du modèle sur ces rencontres.';
+}
+function buildDist(){
+  const D = M.validation && M.validation.dist_buts; if(!D) return;
+  const teams = Object.keys(D.n).filter(t=>t!=='Toutes').sort();
+  $('dchips').innerHTML = ['Toutes'].concat(teams).map(t =>
+    '<button data-t="'+t+'"'+(t===curDTeam?' class="on"':'')+'>'+t+'</button>').join('');
+  $('dchips').addEventListener('click', e => {
+    if(!e.target.dataset.t) return;
+    curDTeam = e.target.dataset.t;
+    document.querySelectorAll('#dchips button').forEach(b =>
+      b.classList.toggle('on', b.dataset.t===curDTeam));
+    drawDist();
+  });
+  drawDist();
 }
 
 /* ---------- modèle & actu ---------- */
@@ -1014,6 +1104,7 @@ Promise.all([
   buildCrit();
   fillModelView();
   fillValidation();
+  buildDist();
   setTimeout(fillProjection, 50);
 }).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });
 

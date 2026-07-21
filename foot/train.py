@@ -182,18 +182,19 @@ def dc_fit(sub, ref_date, xi, teams=None, x0=None, cols=("FTHG", "FTAG"),
             "gamma": float(gam), "rho": float(np.clip(rho, -0.3, 0.3)),
             "delta_home": dlt, "x": res.x}
 
-W_SOT = 0.30   # poids des ratings "tirs cadrés" dans la fusion (validé sur 2122)
+W_SOT = 0.15   # poids tirs cadrés — optimisé backtest 2324-2526 (optimize.py)
 
 def dc_fit_fused(sub, ref_date, xi, teams=None):
     """Fusionne un DC sur les buts et un DC sur les tirs cadrés (proxy xG,
     moins bruité). Les tirs cadrés sont rescalés au taux de conversion moyen
     de la ligue pour rester sur l'échelle des buts."""
-    fit_g = dc_fit(sub, ref_date, xi, teams=teams)
+    fit_g = dc_fit(sub, ref_date, xi, teams=teams, team_home=False)
     sub_s = sub[sub["HST"].notna() & sub["AST"].notna()].copy()
     conv = (sub_s.FTHG.sum() + sub_s.FTAG.sum()) / max(sub_s.HST.sum() + sub_s.AST.sum(), 1)
     sub_s["PgH"] = np.rint(sub_s.HST * conv).astype(float)   # pseudo-buts entiers
     sub_s["PgA"] = np.rint(sub_s.AST * conv).astype(float)
-    fit_s = dc_fit(sub_s, ref_date, xi, teams=fit_g["teams"], cols=("PgH", "PgA"))
+    fit_s = dc_fit(sub_s, ref_date, xi, teams=fit_g["teams"], cols=("PgH", "PgA"),
+                   team_home=False)
     w = W_SOT
     return {"teams": fit_g["teams"],
             "attack": (1-w)*fit_g["attack"] + w*fit_s["attack"],
@@ -220,7 +221,7 @@ def dc_predict(fit, home, away):
                    (dlt[i] if dlt is not None else 0.0))
     mu = math.exp(fit["attack"][j] - fit["defense"][i])
     M = dc_matrix(lam, mu, fit["rho"])
-    return {"lam": lam, "mu": mu,
+    return {"lam": lam, "mu": mu, "rho": fit["rho"],
             "pH": float(np.tril(M, -1).sum()),
             "pD": float(np.trace(M)),
             "pA": float(np.triu(M, 1).sum())}
@@ -268,6 +269,22 @@ def blend_predict(W, f):
     p = np.exp(z); return p / p.sum()
 
 # ---------------------------------------------------------------- backtest
+
+MARGE_NUL = 0.16   # marge d'affichage du nul — optimale en hit@1 ET en réalisme
+
+def pick_score(lam, mu, rho):
+    """Règle de production : meilleure case dans la classe retenue,
+    avec marge de tolérance pour le nul."""
+    Mx = dc_matrix(lam, mu, rho)
+    pH = float(np.tril(Mx, -1).sum()); pD = float(np.trace(Mx)); pA = float(np.triu(Mx, 1).sum())
+    cls = 1 if pD >= max(pH, pA) - MARGE_NUL else (0 if pH > pA else 2)
+    best, bi, bj = -1.0, 0, 0
+    for i in range(Mx.shape[0]):
+        for j in range(Mx.shape[1]):
+            c = 0 if i > j else (1 if i == j else 2)
+            if c == cls and Mx[i, j] > best:
+                best, bi, bj = Mx[i, j], i, j
+    return bi, bj
 
 def rps(p, outcome):  # Ranked Probability Score (H=0,D=1,A=2)
     c = np.cumsum(p); o = np.cumsum(np.eye(3)[outcome])
@@ -341,9 +358,7 @@ def run(local_dir):
     # taux de score exact (argmax de la matrice DC)
     hits, tot = 0, 0
     for q in ev:
-        lam, mu = q["dc"]["lam"], q["dc"]["mu"]
-        M = dc_matrix(lam, mu, 0.0)
-        bx, by = np.unravel_index(M.argmax(), M.shape)
+        bx, by = pick_score(q["dc"]["lam"], q["dc"]["mu"], q["dc"].get("rho", -0.05))
         r = m.loc[q["idx"]]
         hits += int(bx == r.FTHG and by == r.FTAG); tot += 1
     metrics["score_exact_pct"] = round(100.0 * hits / tot, 2)
@@ -367,8 +382,7 @@ def run(local_dir):
                 "acc": round(float(np.mean([int(np.argmax(get_p(q)) == q["y"]) for q in cur])), 4)}
         hits = 0
         for q in cur:
-            Mx = dc_matrix(q["dc"]["lam"], q["dc"]["mu"], 0.0)
-            bx, by = np.unravel_index(Mx.argmax(), Mx.shape)
+            bx, by = pick_score(q["dc"]["lam"], q["dc"]["mu"], q["dc"].get("rho", -0.05))
             r = m.loc[q["idx"]]
             hits += int(bx == r.FTHG and by == r.FTAG)
         vs["score_exact_pct"] = round(100.0 * hits / len(cur), 1)

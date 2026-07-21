@@ -44,3 +44,13 @@ BTTS) à partir du seul `model.json`.
   moyenne des deux clubs. Au-delà du seuil (~30 % des matchs), la carte affiche
   un **scénario surprise** : le score le plus probable dans l'issue inverse
   (l'upset), avec sa probabilité réelle. Toujours visible dans le simulateur.
+
+## v2.5 — Onglet Validation
+- Backtest décliné **par saison** (2023-24, 2024-25, 2025-26) : log-loss modèle vs marché,
+  précision 1N2, scores exacts.
+- **Saisons simulées à l'aveugle** : projection avec le seul modèle d'avant-saison
+  (2 000 sims sur le calendrier réel) vs classement final — MAE points, Spearman,
+  plus gros ratés (Brest 2023-24, Rennes ×2, Nice 2025-26…).
+- **Chaos validé rétrospectivement** : log-loss 0,999 vs 0,943 et favori battu
+  24,4 % vs 21,5 % entre tiers haut/bas d'irrégularité.
+- Synthèse tendances & feuille de route d'amélioration dans l'app.

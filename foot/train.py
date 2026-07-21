@@ -327,6 +327,15 @@ def run(local_dir):
     final = dc_fit(m, now, xi)
     cur_teams = sorted(set(m[m.Season == m.Season.max()].HomeTeam) |
                        set(m[m.Season == m.Season.max()].AwayTeam))
+    # calendrier de la saison cible : statuts actifs + équipes sans historique
+    fix_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures.json")
+    fixture_teams, new_teams = None, []
+    if os.path.exists(fix_path):
+        fx = json.load(open(fix_path, encoding="utf-8"))
+        fixture_teams = sorted({f["h"] for f in fx["fixtures"]} |
+                               {f["a"] for f in fx["fixtures"]})
+        cur_teams = fixture_teams
+        new_teams = [t for t in fixture_teams if t not in final["teams"]]
     model = {
         "meta": {"genere": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
                  "n_matchs": int(len(m)), "saisons": sorted(m.Season.unique()),
@@ -348,6 +357,22 @@ def run(local_dir):
                                "elo_diff_100", "repos_diff_3", "forme_diff_3", "promu_diff"]},
         "backtest": metrics,
     }
+    if new_teams:
+        ref = [t for t in ["Angers", "Le Havre", "Auxerre", "Lorient"]
+               if t in model["equipes"]]
+        p_att = float(np.mean([model["equipes"][t]["attaque"] for t in ref])) - 0.05
+        p_def = float(np.mean([model["equipes"][t]["defense"] for t in ref])) - 0.05
+        for t in new_teams:
+            model["equipes"][t] = {"attaque": round(p_att, 4), "defense": round(p_def, 4),
+                                   "elo": ELO_PROMOTED, "forme5": 1.0, "dernier_match": "",
+                                   "actif": True, "promu": True,
+                                   "prior": "promu (moyenne clubs modestes - malus)"}
+    if fixture_teams:
+        prev = set(m[m.Season == m.Season.max()].HomeTeam) | \
+               set(m[m.Season == m.Season.max()].AwayTeam)
+        for t, e in model["equipes"].items():
+            e["actif"] = t in fixture_teams
+            e["promu"] = bool(t in fixture_teams and t not in prev)
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(model, f, ensure_ascii=False, indent=1)

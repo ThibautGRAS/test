@@ -271,6 +271,60 @@ table.bt{width:100%;border-collapse:collapse;font-size:12px}
 .bt tr:last-child td{border-bottom:none}
 .win{color:var(--good);font-weight:800}
 
+/* ---------- validation ---------- */
+const SNOM = {"2324":"2023-24","2425":"2024-25","2526":"2025-26"};
+function fillValidation(){
+  const V = M.validation; if(!V){ return; }
+  // tableau par saison
+  let rows = '<tr><th>Saison</th><th>Modèle</th><th>Marché</th><th>Préc.</th><th>Exact</th></tr>';
+  Object.entries(V.saisons).forEach(([sn,d]) => {
+    const better = d.blend.logloss <= d.dc.logloss;
+    rows += '<tr><td>'+(SNOM[sn]||sn)+'</td><td>'+d.blend.logloss.toFixed(3)+'</td>'+
+      '<td class="win">'+d.marche.logloss.toFixed(3)+'</td>'+
+      '<td>'+(100*d.blend.acc).toFixed(0)+'%</td><td>'+d.score_exact_pct+'%</td></tr>';
+  });
+  $('vseas').innerHTML = rows;
+  // simulations de saison
+  $('vsim').innerHTML = Object.entries(V.saisons).map(([sn,d]) => {
+    const si = d.simulation;
+    const chip = r => '<span class="badge" style="margin:2px 3px 0 0">'+r.club+' P'+r.predit+'→R'+r.reel+'</span>';
+    return '<div class="news-club"><b>'+(SNOM[sn]||sn)+'</b>'+
+      '<span class="adj">MAE '+si.mae_pts+' pts · ρ '+si.spearman+
+      ' · champion prédit : '+si.champion_predit+(si.champion_predit===si.champion_reel?' ✓':' ✗ ('+si.champion_reel+')')+'</span>'+
+      '<div style="margin-top:6px;font-size:10px;color:var(--muted)">Plus gros ratés : '+
+      si.rates.map(chip).join('')+'</div></div>';
+  }).join('');
+  // chaos
+  const c = V.chaos;
+  $('vchaos').innerHTML = '<tr><th>Tiers d\'irrégularité</th><th>Log-loss</th><th>Favori battu</th></tr>'+
+    '<tr><td>Bas (équipes constantes)</td><td class="win">'+c.logloss_irr_basse.toFixed(3)+'</td><td>'+c.favori_battu_irr_basse_pct+'%</td></tr>'+
+    '<tr><td>Haut (équipes irrégulières)</td><td>'+c.logloss_irr_haute.toFixed(3)+'</td><td style="color:var(--flare)">'+c.favori_battu_irr_haute_pct+'%</td></tr>';
+  $('vchaosnote').textContent = 'Sur '+c.n_par_tiers+' matchs par tiers ('+c.lecture+') : '+
+    'les affiches entre équipes irrégulières sont objectivement plus dures à prédire, '+
+    'même pour le modèle calibré — la composante irrégularité de l\'indice apporte un vrai signal.';
+  // tendances
+  $('vtrends').innerHTML =
+    '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 3/3 (PSG) : le sommet '+
+    'est prévisible. La corrélation des rangs progresse (ρ 0,64 → 0,67 → 0,74) et le taux de '+
+    'scores exacts reste stable (10-13 %), au niveau de l\'état de l\'art. Le chaos est validé : '+
+    '+3 pts de favoris battus et +0,06 de log-loss dans le tiers irrégulier.<br><br>'+
+    '<b style="color:var(--line)">Le point aveugle récurrent.</b> Le modèle d\'avant-saison rate '+
+    'systématiquement les trajectoires de rupture : éclosions (Brest 14e prédit → 3e réel en '+
+    '2023-24, Lens 8e → 2e en 2025-26, Auxerre promu 18e → 10e) comme effondrements (Rennes '+
+    'raté DEUX saisons de suite : 2e → 10e puis 3e → 12e ; Nice 6e → 16e). Ces ruptures naissent '+
+    'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
+    'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
+    '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
+    '1) Ratings sur tirs cadrés (proxy xG, colonnes déjà dans nos données) — moins bruités que '+
+    'les buts. 2) Avantage domicile par équipe avec rétrécissement vers la moyenne. '+
+    '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
+    'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
+    'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+
+    'Dixon-Coles pur (0,985 vs 0,974), faute d\'historique d\'entraînement — il se renforce '+
+    'mécaniquement chaque saison. Le marché reste devant partout (compos et blessures en temps '+
+    'réel) : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
+}
+
 /* ---------- modèle & actu ---------- */
 .news-club{border-bottom:1px solid var(--edge);padding:11px 0}
 .news-club:last-child{border:none}
@@ -299,6 +353,7 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
   <button id="nav-j" class="on">26-27</button>
   <button id="nav-s">Simu</button>
   <button id="nav-c">Clubs</button>
+  <button id="nav-v">Valid.</button>
   <button id="nav-m">Modèle</button>
 </nav>
 
@@ -384,6 +439,33 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
       scores dans les matrices Dixon-Coles ajustées (Elo + signal actu). xPts = points moyens.
       Titre / Top 4 (C1) / Relégation (17-18e directes, la 16e joue un barrage).
       Fiabilité maximale à mi-saison, quand les vrais résultats auront recalé le modèle.</div>
+  </div>
+</div>
+
+<!-- ============ VUE VALIDATION ============ -->
+<div class="view" id="view-v">
+  <div class="card">
+    <h2>Précision par saison — backtest walk-forward</h2>
+    <table class="bt" id="vseas"></table>
+    <div class="hint">Log-loss 1N2 (plus bas = mieux) sur chaque saison rejouée sans tricher :
+      modèle réajusté mensuellement avec les seules données antérieures, calibration entraînée
+      sur les saisons précédentes. Le marché sert d'étalon.</div>
+  </div>
+  <div class="card">
+    <h2>Saisons simulées à l'aveugle — prédit vs réel</h2>
+    <div id="vsim"></div>
+    <div class="hint">Chaque saison est projetée avec le modèle d'avant-saison uniquement
+      (2 000 simulations sur le calendrier réel), puis comparée au classement final.
+      MAE = erreur moyenne en points ; ρ = corrélation de Spearman des rangs.</div>
+  </div>
+  <div class="card">
+    <h2>⚡ Chaos validé rétrospectivement</h2>
+    <table class="bt" id="vchaos"></table>
+    <div class="hint" id="vchaosnote"></div>
+  </div>
+  <div class="card">
+    <h2>Tendances & pistes d'amélioration</h2>
+    <div class="hint" style="margin-top:0" id="vtrends"></div>
   </div>
 </div>
 
@@ -828,6 +910,60 @@ function fillProjection(){
     }).join('');
 }
 
+/* ---------- validation ---------- */
+const SNOM = {"2324":"2023-24","2425":"2024-25","2526":"2025-26"};
+function fillValidation(){
+  const V = M.validation; if(!V){ return; }
+  // tableau par saison
+  let rows = '<tr><th>Saison</th><th>Modèle</th><th>Marché</th><th>Préc.</th><th>Exact</th></tr>';
+  Object.entries(V.saisons).forEach(([sn,d]) => {
+    const better = d.blend.logloss <= d.dc.logloss;
+    rows += '<tr><td>'+(SNOM[sn]||sn)+'</td><td>'+d.blend.logloss.toFixed(3)+'</td>'+
+      '<td class="win">'+d.marche.logloss.toFixed(3)+'</td>'+
+      '<td>'+(100*d.blend.acc).toFixed(0)+'%</td><td>'+d.score_exact_pct+'%</td></tr>';
+  });
+  $('vseas').innerHTML = rows;
+  // simulations de saison
+  $('vsim').innerHTML = Object.entries(V.saisons).map(([sn,d]) => {
+    const si = d.simulation;
+    const chip = r => '<span class="badge" style="margin:2px 3px 0 0">'+r.club+' P'+r.predit+'→R'+r.reel+'</span>';
+    return '<div class="news-club"><b>'+(SNOM[sn]||sn)+'</b>'+
+      '<span class="adj">MAE '+si.mae_pts+' pts · ρ '+si.spearman+
+      ' · champion prédit : '+si.champion_predit+(si.champion_predit===si.champion_reel?' ✓':' ✗ ('+si.champion_reel+')')+'</span>'+
+      '<div style="margin-top:6px;font-size:10px;color:var(--muted)">Plus gros ratés : '+
+      si.rates.map(chip).join('')+'</div></div>';
+  }).join('');
+  // chaos
+  const c = V.chaos;
+  $('vchaos').innerHTML = '<tr><th>Tiers d\'irrégularité</th><th>Log-loss</th><th>Favori battu</th></tr>'+
+    '<tr><td>Bas (équipes constantes)</td><td class="win">'+c.logloss_irr_basse.toFixed(3)+'</td><td>'+c.favori_battu_irr_basse_pct+'%</td></tr>'+
+    '<tr><td>Haut (équipes irrégulières)</td><td>'+c.logloss_irr_haute.toFixed(3)+'</td><td style="color:var(--flare)">'+c.favori_battu_irr_haute_pct+'%</td></tr>';
+  $('vchaosnote').textContent = 'Sur '+c.n_par_tiers+' matchs par tiers ('+c.lecture+') : '+
+    'les affiches entre équipes irrégulières sont objectivement plus dures à prédire, '+
+    'même pour le modèle calibré — la composante irrégularité de l\'indice apporte un vrai signal.';
+  // tendances
+  $('vtrends').innerHTML =
+    '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 3/3 (PSG) : le sommet '+
+    'est prévisible. La corrélation des rangs progresse (ρ 0,64 → 0,67 → 0,74) et le taux de '+
+    'scores exacts reste stable (10-13 %), au niveau de l\'état de l\'art. Le chaos est validé : '+
+    '+3 pts de favoris battus et +0,06 de log-loss dans le tiers irrégulier.<br><br>'+
+    '<b style="color:var(--line)">Le point aveugle récurrent.</b> Le modèle d\'avant-saison rate '+
+    'systématiquement les trajectoires de rupture : éclosions (Brest 14e prédit → 3e réel en '+
+    '2023-24, Lens 8e → 2e en 2025-26, Auxerre promu 18e → 10e) comme effondrements (Rennes '+
+    'raté DEUX saisons de suite : 2e → 10e puis 3e → 12e ; Nice 6e → 16e). Ces ruptures naissent '+
+    'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
+    'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
+    '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
+    '1) Ratings sur tirs cadrés (proxy xG, colonnes déjà dans nos données) — moins bruités que '+
+    'les buts. 2) Avantage domicile par équipe avec rétrécissement vers la moyenne. '+
+    '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
+    'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
+    'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+
+    'Dixon-Coles pur (0,985 vs 0,974), faute d\'historique d\'entraînement — il se renforce '+
+    'mécaniquement chaque saison. Le marché reste devant partout (compos et blessures en temps '+
+    'réel) : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
+}
+
 /* ---------- modèle & actu ---------- */
 function fillModelView(){
   $('newsnote').textContent = NEWS ? NEWS.note + ' Maj : ' + NEWS.maj + ' — ' + NEWS.source : 'signal actu indisponible';
@@ -850,12 +986,12 @@ function fillModelView(){
 
 /* ---------- navigation ---------- */
 function switchView(v){
-  ['j','s','c','m'].forEach(k => {
+  ['j','s','c','v','m'].forEach(k => {
     $('view-'+k).classList.toggle('on', k===v);
     $('nav-'+k).classList.toggle('on', k===v);
   });
 }
-['j','s','c','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
+['j','s','c','v','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
 
 /* ---------- init ---------- */
 Promise.all([
@@ -877,6 +1013,7 @@ Promise.all([
   buildJournees();
   buildCrit();
   fillModelView();
+  fillValidation();
   setTimeout(fillProjection, 50);
 }).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });
 

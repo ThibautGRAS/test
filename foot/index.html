@@ -362,6 +362,45 @@ function fillValidation(){
     'Le marché reste devant partout : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
 }
 
+/* ---------- détecteur Kaunitz ---------- */
+function kaunitz(){
+  const avg=[+$('ka1').value,+$('kaN').value,+$('ka2').value];
+  const mx =[+$('km1').value,+$('kmN').value,+$('km2').value];
+  if(!(avg.every(c=>c>1) && mx.every(c=>c>1))){
+    $('kout').innerHTML='<div class="hint">Renseigne les 6 cotes (moyennes et max).</div>'; return;
+  }
+  const imp=avg.map(c=>1/c), s=imp.reduce((a,b)=>a+b);
+  const cons=imp.map(p=>p/s);                         // consensus de-viggé
+  const ev=cons.map((p,i)=>p*mx[i]-1);                // EV de la meilleure cote
+  const labels=['Victoire domicile (1)','Nul (N)','Victoire extérieur (2)'];
+  const k=ev.indexOf(Math.max(...ev));
+  const marge=100*(s-1);
+  let html='<table class="bt"><tr><th>Issue</th><th>P. consensus</th><th>Cote max</th><th>EV</th></tr>';
+  ev.forEach((e,i)=>{
+    const col=e>0.05?'var(--good)':(e>0?'var(--amber)':'var(--muted)');
+    html+='<tr><td>'+labels[i]+'</td><td>'+(100*cons[i]).toFixed(1)+' %</td><td>'+mx[i].toFixed(2)+
+      '</td><td style="color:'+col+';font-weight:800">'+(e>0?'+':'')+(100*e).toFixed(1)+' %</td></tr>';
+  });
+  html+='</table>';
+  if(ev[k]>0.05){
+    html+='<div class="mchaos" style="border-color:rgba(123,216,143,.4);background:rgba(123,216,143,.08);color:var(--line);margin-top:8px">'+
+      '📡 <b>Déviation détectée</b> : '+labels[k]+' à '+mx[k].toFixed(2)+
+      ' — le book déviant paie '+(100*ev[k]).toFixed(1)+' % au-dessus de la probabilité consensus '+
+      '(seuil Kaunitz : +5 %).</div>';
+  } else if(ev[k]>0){
+    html+='<div class="hint" style="margin-top:8px">Écart positif faible ('+(100*ev[k]).toFixed(1)+
+      ' %) — sous le seuil de signification de la méthode (+5 %).</div>';
+  } else {
+    html+='<div class="hint" style="margin-top:8px">Aucune déviation : toutes les meilleures cotes '+
+      'restent sous les probabilités consensus. Marché aligné (marge moyenne '+marge.toFixed(1)+' %).</div>';
+  }
+  html+='<div class="hint" style="margin-top:6px">⚠ Contexte mesuré : cette méthode a rapporté +17 % '+
+    'sur nos données 2016-24 (réplication du papier) mais est <b style="color:var(--bad)">négative sur '+
+    '2024-26</b> aux cotes de clôture — la faille se referme, et les auteurs eux-mêmes ont vu leurs '+
+    'comptes limités en quelques mois. Une déviation détectée est une information, pas un gain promis.</div>';
+  $('kout').innerHTML=html;
+}
+
 /* ---------- simulateur de paris ---------- */
 const STRAT_NOM = {modele:'Pronostic du génie', value:'Value bets (edge > 5 %)', favori:'Favori du marché'};
 function fillParis(){
@@ -647,6 +686,26 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
     <h2>Détail par saison</h2>
     <table class="bt" id="paristable"></table>
     <div class="hint" id="parisnote"></div>
+  </div>
+  <div class="card">
+    <h2>📡 Détecteur de cotes déviantes — méthode Kaunitz</h2>
+    <div class="hint" style="margin-top:0">La seule stratégie validée en argent réel par la
+      littérature (Kaunitz et al. 2017) : le consensus du marché est la meilleure estimation des
+      probabilités ; on repère le bookmaker qui s'en écarte. Saisis la <b style="color:var(--line)">cote
+      moyenne du marché</b> (sur un comparateur : coteur, oddsportal…) et la <b style="color:var(--line)">meilleure
+      cote trouvée</b> pour chaque issue.</div>
+    <div class="opt-row" style="margin-top:12px">
+      <div><label>Moy. 1</label><input id="ka1" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="2.10"></div>
+      <div><label>Moy. N</label><input id="kaN" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="3.40"></div>
+      <div><label>Moy. 2</label><input id="ka2" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="3.60"></div>
+    </div>
+    <div class="opt-row">
+      <div><label>Max 1</label><input id="km1" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="2.25"></div>
+      <div><label>Max N</label><input id="kmN" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="3.55"></div>
+      <div><label>Max 2</label><input id="km2" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="3.90"></div>
+    </div>
+    <button class="go" id="kgo" style="margin-top:12px">ANALYSER LES COTES</button>
+    <div id="kout" style="margin-top:10px"></div>
   </div>
   <div class="card">
     <h2>🔎 La recherche exhaustive de stratégie — résultats</h2>
@@ -1328,6 +1387,45 @@ function fillValidation(){
     'Le marché reste devant partout : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
 }
 
+/* ---------- détecteur Kaunitz ---------- */
+function kaunitz(){
+  const avg=[+$('ka1').value,+$('kaN').value,+$('ka2').value];
+  const mx =[+$('km1').value,+$('kmN').value,+$('km2').value];
+  if(!(avg.every(c=>c>1) && mx.every(c=>c>1))){
+    $('kout').innerHTML='<div class="hint">Renseigne les 6 cotes (moyennes et max).</div>'; return;
+  }
+  const imp=avg.map(c=>1/c), s=imp.reduce((a,b)=>a+b);
+  const cons=imp.map(p=>p/s);                         // consensus de-viggé
+  const ev=cons.map((p,i)=>p*mx[i]-1);                // EV de la meilleure cote
+  const labels=['Victoire domicile (1)','Nul (N)','Victoire extérieur (2)'];
+  const k=ev.indexOf(Math.max(...ev));
+  const marge=100*(s-1);
+  let html='<table class="bt"><tr><th>Issue</th><th>P. consensus</th><th>Cote max</th><th>EV</th></tr>';
+  ev.forEach((e,i)=>{
+    const col=e>0.05?'var(--good)':(e>0?'var(--amber)':'var(--muted)');
+    html+='<tr><td>'+labels[i]+'</td><td>'+(100*cons[i]).toFixed(1)+' %</td><td>'+mx[i].toFixed(2)+
+      '</td><td style="color:'+col+';font-weight:800">'+(e>0?'+':'')+(100*e).toFixed(1)+' %</td></tr>';
+  });
+  html+='</table>';
+  if(ev[k]>0.05){
+    html+='<div class="mchaos" style="border-color:rgba(123,216,143,.4);background:rgba(123,216,143,.08);color:var(--line);margin-top:8px">'+
+      '📡 <b>Déviation détectée</b> : '+labels[k]+' à '+mx[k].toFixed(2)+
+      ' — le book déviant paie '+(100*ev[k]).toFixed(1)+' % au-dessus de la probabilité consensus '+
+      '(seuil Kaunitz : +5 %).</div>';
+  } else if(ev[k]>0){
+    html+='<div class="hint" style="margin-top:8px">Écart positif faible ('+(100*ev[k]).toFixed(1)+
+      ' %) — sous le seuil de signification de la méthode (+5 %).</div>';
+  } else {
+    html+='<div class="hint" style="margin-top:8px">Aucune déviation : toutes les meilleures cotes '+
+      'restent sous les probabilités consensus. Marché aligné (marge moyenne '+marge.toFixed(1)+' %).</div>';
+  }
+  html+='<div class="hint" style="margin-top:6px">⚠ Contexte mesuré : cette méthode a rapporté +17 % '+
+    'sur nos données 2016-24 (réplication du papier) mais est <b style="color:var(--bad)">négative sur '+
+    '2024-26</b> aux cotes de clôture — la faille se referme, et les auteurs eux-mêmes ont vu leurs '+
+    'comptes limités en quelques mois. Une déviation détectée est une information, pas un gain promis.</div>';
+  $('kout').innerHTML=html;
+}
+
 /* ---------- simulateur de paris ---------- */
 const STRAT_NOM = {modele:'Pronostic du génie', value:'Value bets (edge > 5 %)', favori:'Favori du marché'};
 function fillParis(){
@@ -1479,6 +1577,7 @@ Promise.all([
   fillParis();
   $('stake').addEventListener('input', fillParis);
   $('strat').addEventListener('change', fillParis);
+  $('kgo').addEventListener('click', kaunitz);
   setTimeout(fillProjection, 50);
 }).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });
 

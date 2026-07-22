@@ -297,23 +297,30 @@ def devig(oh, od, oa):
     r = np.array([1/oh, 1/od, 1/oa])
     return r / r.sum()
 
-def blend_features(row, dcp):
-    mkt = devig(row.get("MktH"), row.get("MktD"), row.get("MktA"))
-    f = [math.log(max(dcp["pH"], 1e-9)), math.log(max(dcp["pD"], 1e-9)),
-         math.log(max(dcp["pA"], 1e-9))]
-    if mkt is not None:
-        f += [math.log(mkt[0]), math.log(mkt[1]), math.log(mkt[2]), 1.0]
-    else:
-        f += [f[0], f[1], f[2], 0.0]   # repli : modèle seul
-    f += [(row["EloH"] + ELO_HOME - row["EloA"]) / 100.0,
-          (row["RestH"] - row["RestA"]) / 3.0,
-          (row["FormH"] - row["FormA"]) / 3.0,
-          row["PromH"] - row["PromA"]]
-    return np.array(f)
+FEATURES_BASE = ["bias", "log_pH_dc", "log_pD_dc", "log_pA_dc",
+                 "elo_diff_100", "repos_diff_3", "forme_diff_3", "promu_diff"]
+FEATURES_MKT = FEATURES_BASE + ["log_pH_mkt", "log_pD_mkt", "log_pA_mkt"]
 
-def blend_fit(F, Y):
-    """Régression logistique multinomiale L2 : 3 classes, poids partagés
-    par softmax(W·f) où W est (3, d)."""
+def feat_base(row, dcp):
+    return np.array([1.0,
+        math.log(max(dcp["pH"], 1e-9)), math.log(max(dcp["pD"], 1e-9)),
+        math.log(max(dcp["pA"], 1e-9)),
+        (row["EloH"] + ELO_HOME - row["EloA"]) / 100.0,
+        (row["RestH"] - row["RestA"]) / 3.0,
+        (row["FormH"] - row["FormA"]) / 3.0,
+        row["PromH"] - row["PromA"]])
+
+def feat_mkt(row, dcp):
+    mkt = devig(row.get("MktH"), row.get("MktD"), row.get("MktA"))
+    base = feat_base(row, dcp)
+    if mkt is None:
+        return None
+    return np.concatenate([base, [math.log(mkt[0]), math.log(mkt[1]), math.log(mkt[2])]])
+
+def blend_fit(F, Y, l2=None):
+    """Régression logistique multinomiale L2 : 3 classes, softmax(W·f).
+    l2 fort (base sans marché) évite le surapprentissage sur peu de features."""
+    lam2 = BLEND_L2 if l2 is None else l2
     d = F.shape[1]
     def nll_grad(wf):
         W = wf.reshape(3, d)
@@ -321,8 +328,8 @@ def blend_fit(F, Y):
         Z -= Z.max(axis=1, keepdims=True)
         P = np.exp(Z); P /= P.sum(axis=1, keepdims=True)
         nll = -np.sum(np.log(np.clip(P[np.arange(len(Y)), Y], 1e-12, None)))
-        nll += BLEND_L2 * np.sum(W**2)
-        G = (P - np.eye(3)[Y]).T @ F + 2 * BLEND_L2 * W
+        nll += lam2 * np.sum(W**2)
+        G = (P - np.eye(3)[Y]).T @ F + 2 * lam2 * W
         return nll, G.ravel()
     res = minimize(nll_grad, np.zeros(3*d), jac=True, method="L-BFGS-B")
     return res.x.reshape(3, d)
@@ -336,11 +343,13 @@ def blend_predict(W, f):
 MARGE_NUL = 0.16   # marge d'affichage du nul — optimale en hit@1 ET en réalisme
 
 def pick_score(lam, mu, rho):
-    """Règle de production : meilleure case dans la classe retenue,
-    avec marge de tolérance pour le nul."""
+    """Ancienne règle sur matrice brute (conservée pour compat)."""
     Mx = dc_matrix(lam, mu, rho)
     pH = float(np.tril(Mx, -1).sum()); pD = float(np.trace(Mx)); pA = float(np.triu(Mx, 1).sum())
-    cls = 1 if pD >= max(pH, pA) - MARGE_NUL else (0 if pH > pA else 2)
+    return _best_in_class(Mx, [pH, pD, pA])
+
+def _best_in_class(Mx, pb):
+    cls = 1 if pb[1] >= max(pb[0], pb[2]) - MARGE_NUL else (0 if pb[0] > pb[2] else 2)
     best, bi, bj = -1.0, 0, 0
     for i in range(Mx.shape[0]):
         for j in range(Mx.shape[1]):
@@ -348,6 +357,21 @@ def pick_score(lam, mu, rho):
             if c == cls and Mx[i, j] > best:
                 best, bi, bj = Mx[i, j], i, j
     return bi, bj
+
+def production_matrix(lam, mu, rho, pb):
+    """Matrice recalée sur le 1N2 du blend — STRICTEMENT identique au JS."""
+    Mx = dc_matrix(lam, mu, rho)
+    raw = np.array([np.tril(Mx, -1).sum(), np.trace(Mx), np.triu(Mx, 1).sum()])
+    for i in range(Mx.shape[0]):
+        for j in range(Mx.shape[1]):
+            c = 0 if i > j else (1 if i == j else 2)
+            Mx[i, j] *= pb[c] / max(raw[c], 1e-12)
+    return Mx / Mx.sum()
+
+def pick_score_pb(lam, mu, rho, pb):
+    """Règle de production EXACTE : recale la matrice sur pb, choisit la classe
+    via pb (marge nul), renvoie la meilleure case de cette classe."""
+    return _best_in_class(production_matrix(lam, mu, rho, pb), pb)
 
 def rps(p, outcome):  # Ranked Probability Score (H=0,D=1,A=2)
     c = np.cumsum(p); o = np.cumsum(np.eye(3)[outcome])
@@ -397,7 +421,8 @@ def run(local_dir):
                 if p is None:
                     continue
                 preds.append({"idx": ridx, "season": s, "dc": p,
-                              "f": blend_features(r, p), "y": int(ycls[ridx]),
+                              "fb": feat_base(r, p), "fm": feat_mkt(r, p),
+                              "y": int(ycls[ridx]),
                               "mkt": devig(r.MktH, r.MktD, r.MktA)})
         print(f"  backtest {s}: ok ({len([q for q in preds if q['season']==s])} matchs)")
 
@@ -407,10 +432,15 @@ def run(local_dir):
     for s in blend_eval_seasons:
         hist = [q for q in preds if q["season"] < s]
         cur = [q for q in preds if q["season"] == s]
-        W = blend_fit(np.array([q["f"] for q in hist]), np.array([q["y"] for q in hist]))
+        Wb = blend_fit(np.array([q["fb"] for q in hist]), np.array([q["y"] for q in hist]), l2=5.0)
+        hm = [q for q in hist if q["fm"] is not None]
+        Wm = blend_fit(np.array([q["fm"] for q in hm]), np.array([q["y"] for q in hm]))
         for q in cur:
-            q["blend"] = blend_predict(W, q["f"])
-    ev = [q for q in preds if q["season"] in blend_eval_seasons and q["mkt"] is not None]
+            q["blend"] = blend_predict(Wb, q["fb"])          # mode journées (sans marché)
+            q["blend_m"] = blend_predict(Wm, q["fm"]) if q["fm"] is not None else None
+    # évaluation : le mode principal (journées) est SANS marché, sur TOUS les matchs
+    ev = [q for q in preds if q["season"] in blend_eval_seasons]
+    ev_m = [q for q in ev if q["mkt"] is not None]
     def summarize(get_p, name):
         ll = np.mean([-math.log(max(get_p(q)[q["y"]], 1e-9)) for q in ev])
         r = np.mean([rps(np.array(get_p(q)), q["y"]) for q in ev])
@@ -418,20 +448,30 @@ def run(local_dir):
         metrics[name] = {"logloss": round(float(ll), 4), "rps": round(float(r), 4),
                          "accuracy": round(float(acc), 4)}
     summarize(lambda q: [q["dc"]["pH"], q["dc"]["pD"], q["dc"]["pA"]], "dixon_coles")
-    summarize(lambda q: list(q["blend"]), "blend")
-    summarize(lambda q: list(q["mkt"]), "marche")
+    summarize(lambda q: list(q["blend"]), "blend")            # sans marché = mode principal
+    def summarize_m(get_p, name):
+        ll = np.mean([-math.log(max(get_p(q)[q["y"]], 1e-9)) for q in ev_m])
+        r = np.mean([rps(np.array(get_p(q)), q["y"]) for q in ev_m])
+        acc = np.mean([int(np.argmax(get_p(q)) == q["y"]) for q in ev_m])
+        metrics[name] = {"logloss": round(float(ll), 4), "rps": round(float(r), 4),
+                         "accuracy": round(float(acc), 4)}
+    summarize_m(lambda q: list(q["blend_m"]), "blend_marche")
+    summarize_m(lambda q: list(q["mkt"]), "marche")
+    metrics["_note"] = "blend = sans marché (journées, %d matchs) ; blend_marche et marche sur %d matchs avec cotes" % (len(ev), len(ev_m))
     # taux de score exact (argmax de la matrice DC)
     hits, tot = 0, 0
     for q in ev:
-        bx, by = pick_score(q["dc"]["lam"], q["dc"]["mu"], q["dc"].get("rho", -0.05))
+        bx, by = pick_score_pb(q["dc"]["lam"], q["dc"]["mu"], q["dc"].get("rho", -0.05), q["blend"])
         r = m.loc[q["idx"]]
         hits += int(bx == r.FTHG and by == r.FTAG); tot += 1
     metrics["score_exact_pct"] = round(100.0 * hits / tot, 2)
     metrics["n_matchs_eval"] = tot
     print("Backtest :", json.dumps(metrics, indent=1, ensure_ascii=False))
 
-    # --- blend final (toutes les prédictions de backtest)
-    W = blend_fit(np.array([q["f"] for q in preds]), np.array([q["y"] for q in preds]))
+    # --- blends finaux (toutes les prédictions de backtest)
+    Wb = blend_fit(np.array([q["fb"] for q in preds]), np.array([q["y"] for q in preds]), l2=5.0)
+    hm = [q for q in preds if q["fm"] is not None]
+    Wm = blend_fit(np.array([q["fm"] for q in hm]), np.array([q["y"] for q in hm]))
 
     # --- VALIDATION par saison : métriques, simulation de saison, chaos
     L2STATS = load_l2_stats(getattr(run, "_local", None))
@@ -439,17 +479,20 @@ def run(local_dir):
     validation = {"saisons": {}, "chaos": {}}
     rng = np.random.default_rng(42)
     for s in blend_eval_seasons:
-        cur = [q for q in preds if q["season"] == s and q["mkt"] is not None]
+        cur = [q for q in preds if q["season"] == s]
+        cur_m = [q for q in cur if q["mkt"] is not None]
         vs = {}
-        for name, get_p in [("dc", lambda q: [q["dc"]["pH"], q["dc"]["pD"], q["dc"]["pA"]]),
-                            ("blend", lambda q: list(q["blend"])),
-                            ("marche", lambda q: list(q["mkt"]))]:
+        for name, subset, get_p in [
+                ("dc", cur, lambda q: [q["dc"]["pH"], q["dc"]["pD"], q["dc"]["pA"]]),
+                ("blend", cur, lambda q: list(q["blend"])),
+                ("blend_marche", cur_m, lambda q: list(q["blend_m"])),
+                ("marche", cur_m, lambda q: list(q["mkt"]))]:
             vs[name] = {
-                "logloss": round(float(np.mean([-math.log(max(get_p(q)[q["y"]], 1e-9)) for q in cur])), 4),
-                "acc": round(float(np.mean([int(np.argmax(get_p(q)) == q["y"]) for q in cur])), 4)}
+                "logloss": round(float(np.mean([-math.log(max(get_p(q)[q["y"]], 1e-9)) for q in subset])), 4),
+                "acc": round(float(np.mean([int(np.argmax(get_p(q)) == q["y"]) for q in subset])), 4)}
         hits = 0
         for q in cur:
-            bx, by = pick_score(q["dc"]["lam"], q["dc"]["mu"], q["dc"].get("rho", -0.05))
+            bx, by = pick_score_pb(q["dc"]["lam"], q["dc"]["mu"], q["dc"].get("rho", -0.05), q["blend"])
             r = m.loc[q["idx"]]
             hits += int(bx == r.FTHG and by == r.FTAG)
         vs["score_exact_pct"] = round(100.0 * hits / len(cur), 1)
@@ -494,13 +537,16 @@ def run(local_dir):
             pts_sim[:, ai_] += np.where(ga > gh, 3, np.where(gh == ga, 1, 0))
         xpts = pts_sim.mean(axis=0)
         # classement réel
-        real = {t: 0 for t in teams_s}
+        real = {t: [0, 0, 0] for t in teams_s}   # [pts, diff, bp]
         for _, r in sm.iterrows():
-            if r.FTHG > r.FTAG: real[r.HomeTeam] += 3
-            elif r.FTHG < r.FTAG: real[r.AwayTeam] += 3
-            else: real[r.HomeTeam] += 1; real[r.AwayTeam] += 1
+            gh, ga = int(r.FTHG), int(r.FTAG)
+            real[r.HomeTeam][1] += gh-ga; real[r.AwayTeam][1] += ga-gh
+            real[r.HomeTeam][2] += gh;    real[r.AwayTeam][2] += ga
+            if gh > ga: real[r.HomeTeam][0] += 3
+            elif gh < ga: real[r.AwayTeam][0] += 3
+            else: real[r.HomeTeam][0] += 1; real[r.AwayTeam][0] += 1
         order_p = sorted(teams_s, key=lambda t: -xpts[ti[t]])
-        order_r = sorted(teams_s, key=lambda t: -real[t])
+        order_r = sorted(teams_s, key=lambda t: (-real[t][0], -real[t][1], -real[t][2]))
         rk_p = {t: i+1 for i, t in enumerate(order_p)}
         rk_r = {t: i+1 for i, t in enumerate(order_r)}
         d_rank = [rk_p[t] - rk_r[t] for t in teams_s]
@@ -508,12 +554,16 @@ def run(local_dir):
         rho_s = 1 - 6*sum(d*d for d in d_rank) / (n_t*(n_t**2 - 1))
         errs = sorted(teams_s, key=lambda t: -abs(rk_p[t]-rk_r[t]))
         vs["simulation"] = {
-            "mae_pts": round(float(np.mean([abs(xpts[ti[t]] - real[t]) for t in teams_s])), 1),
+            "mae_pts": round(float(np.mean([abs(xpts[ti[t]] - real[t][0]) for t in teams_s])), 1),
             "spearman": round(float(rho_s), 3),
             "champion_predit": order_p[0], "champion_reel": order_r[0],
             "rates": [{"club": t, "predit": rk_p[t], "reel": rk_r[t]} for t in errs[:3]],
             "reussites": [{"club": t, "predit": rk_p[t], "reel": rk_r[t]}
                           for t in teams_s if rk_p[t] == rk_r[t]][:3]}
+        vs["residus"] = sorted(
+            [{"club": t, "reel": real[t][0], "attendu": round(float(xpts[ti[t]]), 1),
+              "residu": round(real[t][0] - float(xpts[ti[t]]), 1)} for t in teams_s],
+            key=lambda r: -abs(r["residu"]))[:6]
         validation["saisons"][s] = vs
 
     # chaos rétrospectif — deux questions distinctes :
@@ -628,7 +678,8 @@ def run(local_dir):
         cur_teams = fixture_teams
         new_teams = [t for t in fixture_teams if t not in final["teams"]]
     model = {
-        "meta": {"genere": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "meta": {"model_version": "5.0.0", "schema_version": 3,
+                 "genere": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
                  "n_matchs": int(len(m)), "saisons": sorted(m.Season.unique()),
                  "derniere_date": str(m.DateP.max().date()),
                  "xi": xi, "demi_vie_jours": round(math.log(2)/xi),
@@ -643,10 +694,10 @@ def run(local_dir):
                         "actif": t in cur_teams,
                         "promu": t in state["promoted_current"]}
                     for t in final["teams"]},
-        "blend": {"W": [[round(float(v), 5) for v in row] for row in W],
-                  "features": ["log_pH_dc", "log_pD_dc", "log_pA_dc",
-                               "log_pH_mkt", "log_pD_mkt", "log_pA_mkt", "mkt_dispo",
-                               "elo_diff_100", "repos_diff_3", "forme_diff_3", "promu_diff"]},
+        "blend": {"W": [[round(float(v), 5) for v in row] for row in Wb],
+                  "features": FEATURES_BASE},
+        "blend_marche": {"W": [[round(float(v), 5) for v in row] for row in Wm],
+                         "features": FEATURES_MKT},
         "backtest": metrics,
         "validation": validation,
     }
@@ -683,14 +734,21 @@ def run(local_dir):
         pts_l.setdefault(r.HomeTeam, []).append(ph); pts_l.setdefault(r.AwayTeam, []).append(pa)
         gd_l.setdefault(r.HomeTeam, []).append(r.FTHG - r.FTAG)
         gd_l.setdefault(r.AwayTeam, []).append(r.FTAG - r.FTHG)
-    stdp = {t: float(np.std(v)) for t, v in pts_l.items()}
-    ref_reg = sorted(stdp.get(t, None) for t in cur_teams if stdp.get(t) is not None)
-    p75 = ref_reg[int(0.75 * len(ref_reg))]
-    lo_r, hi_r = min(ref_reg), max(ref_reg)
+    stdp = {t: float(np.std(v)) for t, v in pts_l.items() if len(v) >= 3}
+    ref_reg = sorted(stdp.get(t) for t in cur_teams if stdp.get(t) is not None)
+    if len(ref_reg) >= 4:
+        p75 = ref_reg[int(0.75 * len(ref_reg))]
+        lo_r, hi_r = min(ref_reg), max(ref_reg)
+        span = hi_r - lo_r
+    else:
+        p75, lo_r, span = 0.0, 0.0, 0.0
     for t, e in model["equipes"].items():
         v = stdp.get(t, p75)
-        e["volatilite"] = round(float(np.std(gd_l[t])) if t in gd_l else 1.9, 3)
-        e["regularite"] = round(max(0.0, min(1.0, 1 - (v - lo_r) / (hi_r - lo_r))), 3)
+        e["volatilite"] = round(float(np.std(gd_l[t])) if t in gd_l and len(gd_l[t]) >= 3 else 1.9, 3)
+        if span < 1e-8:
+            e["regularite"] = 0.5   # début de saison : neutre, pas de division par zéro
+        else:
+            e["regularite"] = round(max(0.0, min(1.0, 1 - (v - lo_r) / span)), 3)
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(model, f, ensure_ascii=False, indent=1)

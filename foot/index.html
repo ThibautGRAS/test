@@ -440,7 +440,7 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
   <div id="jlist"></div>
   <div class="hint">Score affiché : le plus probable au sein de l'issue retenue du 1N2 calibré
     (Dixon-Coles buts + tirs cadrés, avantage domicile par équipe, Elo, signal actu 📰),
-    avec une marge en faveur du nul calibrée sur son taux historique (~25 %).
+    avec une marge en faveur du nul calibrée sur son taux historique (~24 %).
     Touche un match pour la matrice complète.</div>
 </div>
 
@@ -673,7 +673,7 @@ const ord = r => r===1 ? '1re' : r+'e';
 
 /* Commentaire justifiant le score prédit */
 function displayedClass(pb){
-  return pb[1] >= Math.max(pb[0],pb[2]) - 0.16 ? 1 : (pb[0] > pb[2] ? 0 : 2);
+  return pb[1] >= Math.max(pb[0],pb[2]) - 0.14 ? 1 : (pb[0] > pb[2] ? 0 : 2);
 }
 function comment(h, a, P, opts){
   const o = opts||{}, pb=P.pb, cls=displayedClass(pb);
@@ -779,7 +779,7 @@ function computeMatch(h, a, opts){
   // l'argmax de classe : marge de tolérance 0,16 calibrée pour retrouver le
   // taux de nuls historique (~25 %) sur le calendrier.
   const mxHA = Math.max(pb[0], pb[2]);
-  const cls = (pb[1] >= mxHA - 0.16) ? 1 : (pb[0] > pb[2] ? 0 : 2);
+  const cls = (pb[1] >= mxHA - 0.14) ? 1 : (pb[0] > pb[2] ? 0 : 2);
   let bi=0,bj=0,bp=0;
   for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
     const c = i>j?0:(i===j?1:2);

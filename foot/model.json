@@ -1,6 +1,6 @@
 {
  "meta": {
-  "genere": "2026-07-22 06:13 UTC",
+  "genere": "2026-07-22 06:26 UTC",
   "n_matchs": 3476,
   "saisons": [
    "1617",
@@ -396,27 +396,28 @@
    "regularite": 0.215
   },
   "Troyes": {
-   "attaque": -0.0519,
-   "defense": -0.2234,
-   "delta_dom": 0.0,
-   "elo": 1303.9,
-   "forme5": 0.4,
-   "dernier_match": "2023-06-03",
-   "actif": true,
-   "promu": true,
-   "volatilite": 1.9,
-   "regularite": 0.164
-  },
-  "Le Mans": {
-   "attaque": -0.0258,
-   "defense": -0.0951,
+   "attaque": -0.1128,
+   "defense": -0.1421,
    "delta_dom": 0.0,
    "elo": 1450.0,
    "forme5": 1.0,
    "dernier_match": "",
    "actif": true,
    "promu": true,
-   "prior": "promu (moyenne clubs modestes - malus)",
+   "prior": "promu (régression L2, R² att 0.37, n=22)",
+   "volatilite": 1.9,
+   "regularite": 0.164
+  },
+  "Le Mans": {
+   "attaque": -0.2734,
+   "defense": -0.171,
+   "delta_dom": 0.0,
+   "elo": 1450.0,
+   "forme5": 1.0,
+   "dernier_match": "",
+   "actif": true,
+   "promu": true,
+   "prior": "promu (régression L2, R² att 0.37, n=22)",
    "volatilite": 1.9,
    "regularite": 0.164
   }
@@ -514,37 +515,42 @@
     "score_exact_pct": 10.8,
     "n": 370,
     "simulation": {
-     "mae_pts": 11.9,
-     "spearman": 0.639,
+     "mae_pts": 9.8,
+     "spearman": 0.725,
      "champion_predit": "Paris SG",
      "champion_reel": "Paris SG",
      "rates": [
       {
        "club": "Clermont",
-       "predit": 19,
+       "predit": 18,
        "reel": 8
       },
       {
-       "club": "Ajaccio",
-       "predit": 10,
-       "reel": 18
+       "club": "Angers",
+       "predit": 14,
+       "reel": 20
       },
       {
        "club": "Lorient",
-       "predit": 18,
+       "predit": 16,
        "reel": 10
       }
      ],
      "reussites": [
       {
+       "club": "Auxerre",
+       "predit": 17,
+       "reel": 17
+      },
+      {
+       "club": "Montpellier",
+       "predit": 12,
+       "reel": 12
+      },
+      {
        "club": "Paris SG",
        "predit": 1,
        "reel": 1
-      },
-      {
-       "club": "Rennes",
-       "predit": 4,
-       "reel": 4
       }
      ]
     }
@@ -566,13 +572,13 @@
     "n": 303,
     "simulation": {
      "mae_pts": 7.7,
-     "spearman": 0.647,
+     "spearman": 0.686,
      "champion_predit": "Paris SG",
      "champion_reel": "Paris SG",
      "rates": [
       {
        "club": "Brest",
-       "predit": 14,
+       "predit": 13,
        "reel": 3
       },
       {
@@ -581,16 +587,16 @@
        "reel": 10
       },
       {
-       "club": "Le Havre",
-       "predit": 9,
-       "reel": 15
+       "club": "Monaco",
+       "predit": 7,
+       "reel": 2
       }
      ],
      "reussites": [
       {
-       "club": "Montpellier",
-       "predit": 12,
-       "reel": 12
+       "club": "Metz",
+       "predit": 17,
+       "reel": 17
       },
       {
        "club": "Paris SG",
@@ -672,8 +678,8 @@
     "score_exact_pct": 14.2,
     "n": 302,
     "simulation": {
-     "mae_pts": 7.4,
-     "spearman": 0.756,
+     "mae_pts": 7.7,
+     "spearman": 0.692,
      "champion_predit": "Paris SG",
      "champion_reel": "Paris SG",
      "rates": [
@@ -683,26 +689,26 @@
        "reel": 16
       },
       {
-       "club": "Lorient",
-       "predit": 15,
-       "reel": 9
+       "club": "Paris FC",
+       "predit": 18,
+       "reel": 10
       },
       {
        "club": "Lens",
-       "predit": 7,
+       "predit": 8,
        "reel": 2
       }
      ],
      "reussites": [
       {
-       "club": "Metz",
-       "predit": 18,
-       "reel": 18
-      },
-      {
        "club": "Paris SG",
        "predit": 1,
        "reel": 1
+      },
+      {
+       "club": "Toulouse",
+       "predit": 11,
+       "reel": 11
       }
      ]
     }
@@ -715,6 +721,21 @@
    "favori_battu_irr_haute_pct": 22.2,
    "n_par_tiers": 427,
    "lecture": "tiers bas vs haut d'irrégularité (constance des points saison précédente)"
+  },
+  "chaos_appris": {
+   "w": [
+    -3.9304,
+    2.7864,
+    0.2199
+   ],
+   "features": [
+    "1",
+    "entropie_blend",
+    "irregularite"
+   ],
+   "seuil_q70": -1.0768,
+   "favori_battu_hauts_pct": 29.9,
+   "favori_battu_bas_pct": 18.4
   },
   "dist_buts": {
    "reel": {

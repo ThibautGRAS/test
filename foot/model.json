@@ -1271,5 +1271,14 @@
    },
    "kmax": 7
   }
+ },
+ "mercato_calibration": {
+  "coef_att_par_z_net": 0.0218,
+  "se": 0.0093,
+  "t": 2.33,
+  "n_club_saisons": 108,
+  "r2": 0.049,
+  "fenetres": "étés 2017-2022 (ewenme/transfers, Transfermarkt)",
+  "note": "le solde NET prédit la dérive d'attaque ; brut et défense : non significatifs"
  }
 }

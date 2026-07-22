@@ -62,8 +62,8 @@ nav{
   position:sticky;top:max(env(safe-area-inset-top),8px);z-index:20;
 }
 nav button{
-  flex:1;padding:9px 2px;font-family:inherit;font-weight:800;font-size:11px;
-  letter-spacing:.8px;text-transform:uppercase;border:none;border-radius:10px;
+  flex:1;padding:9px 1px;font-family:inherit;font-weight:800;font-size:10px;
+  letter-spacing:.3px;text-transform:uppercase;border:none;border-radius:10px;
   background:transparent;color:var(--muted);cursor:pointer;
   transition:color .18s, background .18s, box-shadow .18s;
 }
@@ -359,6 +359,41 @@ function fillValidation(){
     'Le marché reste devant partout : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
 }
 
+/* ---------- simulateur de paris ---------- */
+const STRAT_NOM = {modele:'Pronostic du génie', value:'Value bets (edge > 5 %)', favori:'Favori du marché'};
+function fillParis(){
+  const P = M.validation && M.validation.paris; if(!P) return;
+  const stake = Math.max(1, +$('stake').value || 10);
+  const strat = $('strat').value;
+  const g = P.global[strat];
+  const gain = (g.retour - g.mise) * stake;
+  const col = gain >= 0 ? 'var(--good)' : 'var(--bad)';
+  $('parisresult').innerHTML =
+    '<div style="text-align:center;padding:12px 0">'+
+    '<div class="digits" style="font-size:clamp(30px,10vw,44px);background:linear-gradient(180deg,'+
+    (gain>=0?'#BFE9C9,var(--good)':'#F5B3AF,var(--bad)')+');-webkit-background-clip:text;background-clip:text;color:transparent">'+
+    (gain>=0?'+':'')+Math.round(gain).toLocaleString('fr-FR')+' €</div>'+
+    '<div class="scorep">bilan sur 4 saisons · '+g.mise+' paris de '+stake+' €</div></div>'+
+    '<div class="mkt"><div class="cell"><b>'+g.roi+' %</b><span>rendement</span></div>'+
+    '<div class="cell"><b>'+Math.round(g.mise*stake).toLocaleString('fr-FR')+' €</b><span>total misé</span></div></div>';
+  // tableau par saison + courbe de capital
+  let rows = '<tr><th>Saison</th><th>Paris</th><th>Gagnés</th><th>ROI</th><th>Bilan</th></tr>';
+  Object.entries(P.saisons).forEach(([sn,r]) => {
+    const d = r[strat];
+    const b = Math.round((d.retour - d.mise) * stake);
+    rows += '<tr><td>'+(SNOM[sn]||sn)+'</td><td>'+d.mise+'</td><td>'+d.gagnes+'</td>'+
+      '<td class="'+(d.roi>=0?'win':'')+'" style="'+(d.roi<0?'color:var(--bad)':'')+'">'+d.roi+' %</td>'+
+      '<td style="color:'+(b>=0?'var(--good)':'var(--bad)')+'">'+(b>=0?'+':'')+b+' €</td></tr>';
+  });
+  $('paristable').innerHTML = rows;
+  $('parisnote').innerHTML = 'Stratégie : <b style="color:var(--line)">'+STRAT_NOM[strat]+'</b>. '+
+    (strat==='value'
+      ? 'On ne parie que quand le génie estime une probabilité nettement supérieure à celle implicite dans la cote — moins de paris, plus volatils.'
+      : strat==='favori'
+        ? 'Témoin : parier bêtement le favori du bookmaker à chaque match.'
+        : 'On parie le résultat le plus probable selon le génie à chaque match de la saison.');
+}
+
 /* ---------- distribution des totaux (validation) ---------- */
 let curDTeam = 'Toutes';
 function drawDist(){
@@ -422,10 +457,11 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
 </header>
 
 <nav>
-  <button id="nav-j" class="on">26-27</button>
+  <button id="nav-j" class="on">Saison</button>
   <button id="nav-s">Simu</button>
   <button id="nav-c">Clubs</button>
-  <button id="nav-v">Valid.</button>
+  <button id="nav-v">Valid</button>
+  <button id="nav-p">Paris</button>
   <button id="nav-m">Modèle</button>
 </nav>
 
@@ -570,6 +606,35 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
   </div>
 </div>
 
+<!-- ============ VUE PARIS ============ -->
+<div class="view" id="view-p">
+  <div class="card">
+    <h2>💶 Si tu avais suivi le génie</h2>
+    <div class="opt-row" style="grid-template-columns:1fr 1fr">
+      <div><label for="stake">Mise par match (€)</label><input id="stake" type="number" min="1" value="10" inputmode="numeric"></div>
+      <div><label for="strat">Stratégie</label><select id="strat">
+        <option value="modele">Pronostic du génie (chaque match)</option>
+        <option value="value">Value bets (edge &gt; 5 %)</option>
+        <option value="favori">Favori du marché (témoin)</option>
+      </select></div>
+    </div>
+    <div id="parisresult"></div>
+  </div>
+  <div class="card">
+    <h2>Détail par saison</h2>
+    <table class="bt" id="paristable"></table>
+    <div class="hint" id="parisnote"></div>
+  </div>
+  <div class="card" style="border-color:rgba(240,113,107,.35)">
+    <div class="hint" style="margin:0"><b style="color:var(--bad)">⚠ Réalité des chiffres.</b>
+      Ce backtest utilise les cotes de clôture réelles sur 1 281 matchs. Aucune stratégie n'est
+      gagnante sur la durée : la marge des bookmakers (~5-7 %) est structurellement imbattable en
+      pariant du 1N2. Les bonnes saisons existent mais ne se prédisent pas. Cet outil est une
+      démonstration pédagogique, pas une incitation ni une méthode de gain. Ne pariez jamais d'argent
+      que vous ne pouvez pas perdre.</div>
+  </div>
+</div>
+
 <!-- ============ VUE MODÈLE & ACTU ============ -->
 <div class="view" id="view-m">
   <div class="card">
@@ -670,6 +735,16 @@ function buildRanks(){
            elo: Object.fromEntries(eloSorted.map((t,i)=>[t,i+1])), n: act.length};
 }
 const ord = r => r===1 ? '1re' : r+'e';
+let PROJRANK = null;   // rempli par fillProjection
+function rankLabel(t){
+  const e = M.equipes[t];
+  const elo = 'Elo ' + e.elo.toFixed(0);
+  if(PROJRANK && PROJRANK[t]){
+    const r = PROJRANK[t];
+    return (r === 1 ? '1er' : r + 'e') + ' projeté · ' + elo;
+  }
+  return elo;
+}
 
 /* Commentaire justifiant le score prédit */
 function displayedClass(pb){
@@ -883,8 +958,8 @@ function predict(){
 function render(h, a, P){
   const {X, pb, lam, mu, bi, bj, bp, n} = P;
   const xgH=P.xgH, xgA=P.xgA;
-  $('bh').innerHTML = h + '<small>domicile · Elo ' + M.equipes[h].elo.toFixed(0) + '</small>';
-  $('ba').innerHTML = a + '<small>extérieur · Elo ' + M.equipes[a].elo.toFixed(0) + '</small>';
+  $('bh').innerHTML = h + '<small>domicile · ' + rankLabel(h) + '</small>';
+  $('ba').innerHTML = a + '<small>extérieur · ' + rankLabel(a) + '</small>';
   $('score').textContent = bi + ' – ' + bj;
   // score modal global (max de toute la matrice) pour transparence
   let mgi=0,mgj=0,mgp=0;
@@ -981,6 +1056,15 @@ function critVal(t, id){
     case 'actu': return na.att + na.def;
   }
 }
+function critColor(t01){
+  // rouge (bas) -> ambre (moyen) -> vert (haut), sur 0..1
+  const stops = [[0,[240,113,107]],[0.5,[255,194,75]],[1,[123,216,143]]];
+  let a=stops[0], b=stops[2];
+  for(let k=0;k<stops.length-1;k++) if(t01>=stops[k][0] && t01<=stops[k+1][0]){a=stops[k];b=stops[k+1];}
+  const f=(t01-a[0])/((b[0]-a[0])||1);
+  const c=a[1].map((v,i)=>Math.round(v+f*(b[1][i]-v)));
+  return 'rgb('+c[0]+','+c[1]+','+c[2]+')';
+}
 function drawCrit(){
   const act = Object.keys(M.equipes).filter(t=>M.equipes[t].actif);
   const vals = act.map(t => ({t, v: (critVal(t, curCrit) ?? 0)})).sort((a,b)=>b.v-a.v);
@@ -988,15 +1072,17 @@ function drawCrit(){
   if(curCrit==='actu'){ const m = Math.max(Math.abs(lo), Math.abs(hi), 0.01); lo=-m; hi=m; }
   const span = (hi-lo)||1;
   $('critgraph').innerHTML = vals.map(({t,v}) => {
-    const pctW = Math.max(4, 100*(v-lo)/span);
-    const disp = curCrit==='actu' ? Math.round(50+50*v/((hi)||1)) : Math.round(100*(v-lo)/span);
-    const neg = curCrit==='actu' && v<0 ? ' neg' : '';
-    return '<div class="gbar'+neg+'"><span class="nm">'+t+
+    const t01 = (v-lo)/span;
+    const pctW = Math.max(4, 100*t01);
+    const disp = curCrit==='actu' ? Math.round(50+50*v/((hi)||1)) : Math.round(100*t01);
+    const col = critColor(t01);
+    return '<div class="gbar"><span class="nm">'+t+
       (M.equipes[t].promu?' <span class="badge">P</span>':'')+'</span>'+
-      '<span class="tr"><span class="fl" style="width:'+pctW+'%"></span></span>'+
-      '<span class="vl">'+disp+'</span></div>';
+      '<span class="tr"><span class="fl" style="width:'+pctW+'%;background:'+
+      'linear-gradient(90deg,'+col+'99,'+col+');box-shadow:0 0 9px '+col+'55"></span></span>'+
+      '<span class="vl" style="color:'+col+'">'+disp+'</span></div>';
   }).join('');
-  $('crithint').textContent = CRITERES.find(c=>c.id===curCrit).hint + ' Échelle relative 0-100 sur le plateau 2026-27.';
+  $('crithint').textContent = CRITERES.find(c=>c.id===curCrit).hint + ' Barres colorées et échelle 0-100 relatives au plateau 2026-27.';
 }
 function buildCrit(){
   $('critchips').innerHTML = CRITERES.map(c =>
@@ -1055,6 +1141,7 @@ function simulateSeason(nSims){
 function fillProjection(){
   const N = 5000;
   const res = simulateSeason(N);
+  PROJRANK = {}; res.forEach((r,i) => PROJRANK[r.t] = i+1);
   const fp = x => x<0.001 ? '—' : x<0.01 ? '<1%' : Math.round(100*x)+'%';
   $('proj').innerHTML = '<tr><th>#</th><th style="text-align:left">Club</th>'+
     '<th>xPts</th><th>Titre</th><th>Top 4</th><th>Relég.</th></tr>' +
@@ -1156,6 +1243,41 @@ function fillValidation(){
     'Le marché reste devant partout : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
 }
 
+/* ---------- simulateur de paris ---------- */
+const STRAT_NOM = {modele:'Pronostic du génie', value:'Value bets (edge > 5 %)', favori:'Favori du marché'};
+function fillParis(){
+  const P = M.validation && M.validation.paris; if(!P) return;
+  const stake = Math.max(1, +$('stake').value || 10);
+  const strat = $('strat').value;
+  const g = P.global[strat];
+  const gain = (g.retour - g.mise) * stake;
+  const col = gain >= 0 ? 'var(--good)' : 'var(--bad)';
+  $('parisresult').innerHTML =
+    '<div style="text-align:center;padding:12px 0">'+
+    '<div class="digits" style="font-size:clamp(30px,10vw,44px);background:linear-gradient(180deg,'+
+    (gain>=0?'#BFE9C9,var(--good)':'#F5B3AF,var(--bad)')+');-webkit-background-clip:text;background-clip:text;color:transparent">'+
+    (gain>=0?'+':'')+Math.round(gain).toLocaleString('fr-FR')+' €</div>'+
+    '<div class="scorep">bilan sur 4 saisons · '+g.mise+' paris de '+stake+' €</div></div>'+
+    '<div class="mkt"><div class="cell"><b>'+g.roi+' %</b><span>rendement</span></div>'+
+    '<div class="cell"><b>'+Math.round(g.mise*stake).toLocaleString('fr-FR')+' €</b><span>total misé</span></div></div>';
+  // tableau par saison + courbe de capital
+  let rows = '<tr><th>Saison</th><th>Paris</th><th>Gagnés</th><th>ROI</th><th>Bilan</th></tr>';
+  Object.entries(P.saisons).forEach(([sn,r]) => {
+    const d = r[strat];
+    const b = Math.round((d.retour - d.mise) * stake);
+    rows += '<tr><td>'+(SNOM[sn]||sn)+'</td><td>'+d.mise+'</td><td>'+d.gagnes+'</td>'+
+      '<td class="'+(d.roi>=0?'win':'')+'" style="'+(d.roi<0?'color:var(--bad)':'')+'">'+d.roi+' %</td>'+
+      '<td style="color:'+(b>=0?'var(--good)':'var(--bad)')+'">'+(b>=0?'+':'')+b+' €</td></tr>';
+  });
+  $('paristable').innerHTML = rows;
+  $('parisnote').innerHTML = 'Stratégie : <b style="color:var(--line)">'+STRAT_NOM[strat]+'</b>. '+
+    (strat==='value'
+      ? 'On ne parie que quand le génie estime une probabilité nettement supérieure à celle implicite dans la cote — moins de paris, plus volatils.'
+      : strat==='favori'
+        ? 'Témoin : parier bêtement le favori du bookmaker à chaque match.'
+        : 'On parie le résultat le plus probable selon le génie à chaque match de la saison.');
+}
+
 /* ---------- distribution des totaux (validation) ---------- */
 let curDTeam = 'Toutes';
 function drawDist(){
@@ -1216,12 +1338,12 @@ function fillModelView(){
 
 /* ---------- navigation ---------- */
 function switchView(v){
-  ['j','s','c','v','m'].forEach(k => {
+  ['j','s','c','v','p','m'].forEach(k => {
     $('view-'+k).classList.toggle('on', k===v);
     $('nav-'+k).classList.toggle('on', k===v);
   });
 }
-['j','s','c','v','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
+['j','s','c','v','p','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
 
 /* ---------- init ---------- */
 Promise.all([
@@ -1245,6 +1367,9 @@ Promise.all([
   fillModelView();
   fillValidation();
   buildDist();
+  fillParis();
+  $('stake').addEventListener('input', fillParis);
+  $('strat').addEventListener('change', fillParis);
   setTimeout(fillProjection, 50);
 }).catch(e => { $('meta').textContent = 'erreur de chargement'; console.error(e); });
 

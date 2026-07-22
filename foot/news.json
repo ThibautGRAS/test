@@ -1,7 +1,7 @@
 {
  "maj": "2026-07-21",
  "source": "presse spécialisée (Maxifoot, Foot Mercato, L1.com, Lensois.com, Le Petit Lillois, Wikipédia), juillet 2026",
- "note": "Ajustements modérés (±0,03 à ±0,08 sur l'échelle log des forces), sourcés ci-dessous. Mercato ouvert jusqu'au 1er septembre : signaux susceptibles d'évoluer. Coupe du monde achevée le 19 juillet — retours tardifs d'internationaux en début de saison. Les clubs européens (7 cette saison) enchaînent les semaines à trois matchs : fatigue non modélisée match par match, signalée dans les commentaires.",
+ "note": "Ajustements modérés (±0,03 à ±0,08 sur l'échelle log des forces), sourcés ci-dessous. Mercato ouvert jusqu'au 1er septembre : signaux susceptibles d'évoluer. Coupe du monde achevée le 19 juillet — retours tardifs d'internationaux en début de saison. Les clubs européens (7 cette saison) enchaînent les semaines à trois matchs : fatigue non modélisée match par match, signalée dans les commentaires. Amplitudes des ajustements mercato validées par calibration sur 108 club-saisons (2017-2022) : +0,022 d'attaque par écart-type de solde net (t=2,3).",
  "equipes": {
   "Paris SG": {
    "att": -0.03,
@@ -163,6 +163,28 @@
   "Le Mans": {
    "europe": null,
    "banc": "staff de la montée conservé"
+  }
+ },
+ "mercato": {
+  "calibration": {
+   "coef_att_par_z_net": 0.0218,
+   "se": 0.0093,
+   "t": 2.33,
+   "n_club_saisons": 108,
+   "r2": 0.049,
+   "fenetres": "étés 2017-2022 (ewenme/transfers, Transfermarkt)",
+   "note": "le solde NET prédit la dérive d'attaque ; brut et défense : non significatifs"
+  },
+  "methode": "solde net estival en z-score intra-saison ; ajustement attaque = 0,0218 × z. Fenêtre 2026 ouverte jusqu'au 1er septembre : estimations presse provisoires, remplacées par les chiffres définitifs à la clôture (mercato.py).",
+  "z_net_provisoire_2026": {
+   "Paris FC": 1.0,
+   "Marseille": -1.2,
+   "Lorient": -0.8,
+   "Lyon": -0.7,
+   "Paris SG": 0.0,
+   "Lens": 0.4,
+   "Monaco": 0.2,
+   "Rennes": 0.3
   }
  }
 }

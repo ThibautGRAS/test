@@ -76,3 +76,20 @@ BTTS) à partir du seul `model.json`.
 - Backtest 4 saisons (1 281 matchs éval) : 2022-23 ajoutée APRÈS l'optimisation des
   hyperparamètres → test quasi hors-échantillon réussi (blend 0,983 vs marché 0,975).
 - Champion prédit 4/4, chaos confirmé sur 854 matchs par tiers.
+
+## v4.0 — Six chantiers d'amélioration
+1. **Priors promus informés par la L2** (`load_l2_stats`, `promus_regression`) :
+   régression stats de montée → ratings L1 (R² 0,37 attaque), anti-fuite dans les
+   simulations. ρ 2022-23 : 0,64 → 0,73. Troyes/Le Mans priorisés sur leur vraie L2.
+2. **Signal mercato** : données Transfermarkt inaccessibles après 2021 — calibration
+   reportée sur les résidus live (voir 6).
+3. **Recalage over/under** : testé sur 1 281 matchs — améliore les probabilités
+   (ll 1N2 −0,002, totaux −0,008) mais coûte 1,2 pt de hit@1. Intégré uniquement au
+   simulateur (saisie des cotes +/−2,5).
+4. **Chaos appris** : logistique favori_battu ~ entropie + irrégularité, réajustée à
+   chaque réentraînement. 29,9 % vs 18,4 % de favoris battus (tiers haut/bas).
+   L'app affiche directement P(upset).
+5. **Atténuation inter-saisons** : testée (delta 0,9/0,8) et rejetée — aucun gain.
+6. **Journal de prédictions figées** (`journal.py`) : l'Action (mardi + vendredi) fige
+   les prédictions des 9 prochains jours et évalue les précédentes — hit@1 et log-loss
+   2026-27 traçables et inviolables dès août.

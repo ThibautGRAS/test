@@ -323,12 +323,16 @@ function fillValidation(){
     'équipe</s> : testé puis retiré — aucun gain mesurable sur 911 matchs, le modèle simple '+
     'gagne. La règle d\'affichage à marge de nul 0,16 s\'est révélée optimale à la fois en '+
     'réalisme et en précision (hit@1 12,1 % vs 11,3 % pour l\'argmax global). '+
-    '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
-    'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
-    'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+
-    'Dixon-Coles pur (0,985 vs 0,974), faute d\'historique d\'entraînement — il se renforce '+
-    'mécaniquement chaque saison. Le marché reste devant partout (compos et blessures en temps '+
-    'réel) : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
+    '3) <s>Priors promus via la Ligue 2</s> : intégrés — régression stats L2 → ratings L1 '+
+    '(R² 0,37 en attaque, nul en défense), gain net sur les simulations 2022-24 (ρ 0,64 → 0,73 '+
+    'en 2022-23). 4) <s>Chaos appris</s> : régression logistique remplaçant les poids manuels '+
+    '(29,9 % vs 18,4 % de favoris battus). 5) <s>Recalage over/under</s> : testé — améliore les '+
+    'probabilités mais coûte 1,2 pt de hit@1 ; retenu uniquement dans le simulateur sur saisie '+
+    'des cotes. 6) Atténuation inter-saisons : testée et REJETÉE (aucun gain). '+
+    '7) Journal de prédictions figées (journal.py, bihebdo via l\'Action) : à partir d\'août, '+
+    'hit@1 et log-loss 2026-27 se mesurent en conditions réelles, et les résidus des clubs '+
+    'ajustés par l\'actu permettront de calibrer le signal mercato sur des faits. '+
+    'Le marché reste devant partout : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
 }
 
 /* ---------- distribution des totaux (validation) ---------- */
@@ -438,6 +442,13 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
         <div><label for="ra">Repos ext. (j)</label><input id="ra" type="number" min="1" max="14" value="7" inputmode="numeric"></div>
         <div></div>
       </div>
+      <div class="opt-row">
+        <div><label for="oov">Cote +2,5</label><input id="oov" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 1.72"></div>
+        <div><label for="oun">Cote −2,5</label><input id="oun" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="ex 2.10"></div>
+        <div></div>
+      </div>
+      <div class="hint">Les cotes +/−2,5 recalent le total de buts de la matrice sur le marché
+        (améliore les probabilités, testé sur 1 281 matchs).</div>
     </details>
     <button class="go" id="go">PRÉDIRE LE MATCH</button>
   </div>
@@ -548,11 +559,12 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
       seuil « match piégeux » fixé au quantile 70 % du calendrier : ~30 % des 306 matchs
       déclenchent la ligne ⚡. Le scénario surprise est alors le score le plus probable
       <i>dans l'issue inverse</i>, avec sa probabilité réelle — un upset à 8 % reste affiché à 8 %.<br><br>
-      Validation empirique : les 5 matchs les plus chaotiques de la saison sont les
-      confrontations OM-Monaco-Lyon entre elles ; le plus verrouillé est PSG-Le Havre
-      (le plus fort contre le plus régulier). Les poids 55/45 sont un choix assumé,
-      recalibrable en fin de saison en vérifiant si les matchs « chaos &gt; 80 » produisent
-      réellement plus d'upsets.
+      <b style="color:var(--line)">v4 — poids appris.</b> Les poids ne sont plus fixés à la main :
+      une régression logistique « favori battu ~ entropie + irrégularité » est ajustée sur les
+      1 281 matchs du backtest à chaque réentraînement. L'indice affiché est directement la
+      probabilité que le favori du modèle soit battu. Discrimination mesurée : 29,9 % de favoris
+      battus dans les 30 % de matchs les plus « chauds », contre 18,4 % ailleurs.
+      Le seuil « match piégeux » est le quantile 70 % appris.
     </div>
   </div>
   <div class="card">
@@ -662,12 +674,24 @@ function comment(h, a, P, opts){
 
 /* Prédiction centrale : matrice + 1N2 calibré. odds/rest optionnels. */
 function computeMatch(h, a, opts){
-  const o = Object.assign({news:true, oh:0, od:0, oa:0, rh:7, ra:7}, opts||{});
+  const o = Object.assign({news:true, oh:0, od:0, oa:0, oov:0, oun:0, rh:7, ra:7}, opts||{});
   const th=M.equipes[h], ta=M.equipes[a];
   const nh = o.news ? newsAdj(h) : {att:0,def:0};
   const na = o.news ? newsAdj(a) : {att:0,def:0};
-  const lam = Math.exp((th.attaque+nh.att) - (ta.defense+na.def) + M.gamma + (th.delta_dom||0));
-  const mu  = Math.exp((ta.attaque+na.att) - (th.defense+nh.def));
+  let lam = Math.exp((th.attaque+nh.att) - (ta.defense+na.def) + M.gamma + (th.delta_dom||0));
+  let mu  = Math.exp((ta.attaque+na.att) - (th.defense+nh.def));
+  // recalage optionnel du total de buts sur les cotes over/under 2,5
+  if(o.oov>1 && o.oun>1){
+    const pOv = (1/o.oov)/((1/o.oov)+(1/o.oun));
+    let lo=0.6, hi=1.7;
+    for(let k=0;k<24;k++){
+      const sf=(lo+hi)/2, Xt=dcMatrix(lam*sf, mu*sf, M.rho, M.meta.max_goals);
+      let po=0;
+      for(let i=0;i<Xt.length;i++)for(let j=0;j<Xt[i].length;j++) if(i+j>2.5) po+=Xt[i][j];
+      if(po<pOv) lo=sf; else hi=sf;
+    }
+    const sf=(lo+hi)/2; lam*=sf; mu*=sf;
+  }
   const n = M.meta.max_goals;
   const X = dcMatrix(lam, mu, M.rho, n);
   let pH=0,pD=0,pA=0;
@@ -707,10 +731,10 @@ function computeMatch(h, a, opts){
 
 function chaosLine(h, a, P){
   const c = chaosIndex(h, a, P.pb);
-  if(c < CHAOS_SEUIL) return '';
+  if(c < chaosThreshold()) return '';
   const sp = surprise(h, a, P);
-  return '<div class="mchaos">⚡ Match piégeux (chaos '+chaosDisp(c)+
-    '/100) — scénario surprise : '+sp.bi+'–'+sp.bj+' ('+pct(sp.bp)+')</div>';
+  return '<div class="mchaos">⚡ Match piégeux — risque d\'upset '+chaosDisp(c)+
+    '&nbsp;% (appris sur 1 281 matchs) · scénario surprise : '+sp.bi+'–'+sp.bj+' ('+pct(sp.bp)+')</div>';
 }
 
 /* ---------- vue journées ---------- */
@@ -785,13 +809,14 @@ function predict(){
   const useNews = $('usenews').classList.contains('on');
   const p = computeMatch(h, a, {news: useNews,
     oh:+$('oh').value, od:+$('od').value, oa:+$('oa').value,
+    oov:+$('oov').value, oun:+$('oun').value,
     rh:+$('rh').value||7, ra:+$('ra').value||7});
   render(h, a, p);
   const cx = chaosIndex(h, a, p.pb), sp = surprise(h, a, p);
   $('scom').innerHTML = comment(h, a, p,
     {rh:+$('rh').value||7, ra:+$('ra').value||7, news: useNews}) +
-    '<div class="mchaos" style="margin-top:6px">⚡ Indice chaos : '+chaosDisp(cx)+
-    '/100'+(cx>=CHAOS_SEUIL?' — match piégeux':'')+' · scénario surprise : '+
+    '<div class="mchaos" style="margin-top:6px">⚡ Risque d\'upset : '+chaosDisp(cx)+
+    '&nbsp;%'+(cx>=chaosThreshold()?' — match piégeux':'')+' · scénario surprise : '+
     sp.bi+'–'+sp.bj+' ('+pct(sp.bp)+')</div>';
 }
 function render(h, a, P){
@@ -841,7 +866,16 @@ function render(h, a, P){
 function chaosIndex(h, a, pb){
   const H = -pb.reduce((s,p)=>s+(p>0?p*Math.log(p):0),0)/Math.log(3);
   const irr = 1 - (M.equipes[h].regularite + M.equipes[a].regularite)/2;
+  const CA = M.validation && M.validation.chaos_appris;
+  if(CA){ // logistique apprise sur le backtest : renvoie P(favori battu)
+    const z = CA.w[0] + CA.w[1]*H + CA.w[2]*irr;
+    return 1/(1+Math.exp(-z));
+  }
   return 0.55*H + 0.45*irr;
+}
+function chaosThreshold(){
+  const CA = M.validation && M.validation.chaos_appris;
+  return CA ? 1/(1+Math.exp(-CA.seuil_q70)) : CHAOS_SEUIL;
 }
 function surprise(h, a, P){
   const cls = P.pb.indexOf(Math.max(...P.pb));
@@ -853,9 +887,11 @@ function surprise(h, a, P){
   }
   return {bi,bj,bp};
 }
-const CHAOS_SEUIL = 0.84;   // ~30% des matchs du calendrier
-// affichage 0-100 rééchelonné : 0.55 (verrouillé) -> 1.0 (chaos total)
-const chaosDisp = c => Math.round(100*Math.max(0, Math.min(1, (c-0.55)/0.45)));
+const CHAOS_SEUIL = 0.84;   // repli si poids appris absents
+// avec les poids appris, c EST P(favori battu) -> affichage direct en %
+const chaosDisp = c => (M.validation && M.validation.chaos_appris)
+  ? Math.round(100*c)
+  : Math.round(100*Math.max(0, Math.min(1, (c-0.55)/0.45)));
 
 /* ---------- comparateur de clubs ---------- */
 const CRITERES = [
@@ -1018,12 +1054,16 @@ function fillValidation(){
     'équipe</s> : testé puis retiré — aucun gain mesurable sur 911 matchs, le modèle simple '+
     'gagne. La règle d\'affichage à marge de nul 0,16 s\'est révélée optimale à la fois en '+
     'réalisme et en précision (hit@1 12,1 % vs 11,3 % pour l\'argmax global). '+
-    '3) Quantifier le signal actu : mesurer après 10 journées si les clubs ajustés surperforment '+
-    'leur rating et calibrer les amplitudes sur cette base. 4) Enjeu de fin de saison (maintien / '+
-    'Europe) comme feature de contexte. 5) Blend : en 2024-25 il a légèrement dégradé le '+
-    'Dixon-Coles pur (0,985 vs 0,974), faute d\'historique d\'entraînement — il se renforce '+
-    'mécaniquement chaque saison. Le marché reste devant partout (compos et blessures en temps '+
-    'réel) : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
+    '3) <s>Priors promus via la Ligue 2</s> : intégrés — régression stats L2 → ratings L1 '+
+    '(R² 0,37 en attaque, nul en défense), gain net sur les simulations 2022-24 (ρ 0,64 → 0,73 '+
+    'en 2022-23). 4) <s>Chaos appris</s> : régression logistique remplaçant les poids manuels '+
+    '(29,9 % vs 18,4 % de favoris battus). 5) <s>Recalage over/under</s> : testé — améliore les '+
+    'probabilités mais coûte 1,2 pt de hit@1 ; retenu uniquement dans le simulateur sur saisie '+
+    'des cotes. 6) Atténuation inter-saisons : testée et REJETÉE (aucun gain). '+
+    '7) Journal de prédictions figées (journal.py, bihebdo via l\'Action) : à partir d\'août, '+
+    'hit@1 et log-loss 2026-27 se mesurent en conditions réelles, et les résidus des clubs '+
+    'ajustés par l\'actu permettront de calibrer le signal mercato sur des faits. '+
+    'Le marché reste devant partout : l\'objectif réaliste est de réduire l\'écart, pas de le battre.';
 }
 
 /* ---------- distribution des totaux (validation) ---------- */

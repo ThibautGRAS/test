@@ -2,7 +2,7 @@
  "meta": {
   "model_version": "5.0.0",
   "schema_version": 3,
-  "genere": "2026-07-22 07:10 UTC",
+  "genere": "2026-07-22 08:11 UTC",
   "n_matchs": 3476,
   "saisons": [
    "1617",
@@ -546,7 +546,7 @@
    "accuracy": 0.5355
   },
   "_note": "blend = sans marché (journées, 1281 matchs) ; blend_marche et marche sur 1281 matchs avec cotes",
-  "score_exact_pct": 11.32,
+  "score_exact_pct": 11.16,
   "n_matchs_eval": 1281
  },
  "validation": {
@@ -568,7 +568,7 @@
      "logloss": 0.975,
      "acc": 0.5486
     },
-    "score_exact_pct": 10.5,
+    "score_exact_pct": 10.0,
     "n": 370,
     "simulation": {
      "mae_pts": 9.8,
@@ -666,7 +666,7 @@
      "logloss": 1.0109,
      "acc": 0.5116
     },
-    "score_exact_pct": 12.2,
+    "score_exact_pct": 11.6,
     "n": 303,
     "simulation": {
      "mae_pts": 7.7,
@@ -759,7 +759,7 @@
      "logloss": 0.9584,
      "acc": 0.5392
     },
-    "score_exact_pct": 9.2,
+    "score_exact_pct": 9.8,
     "n": 306,
     "simulation": {
      "mae_pts": 8.2,

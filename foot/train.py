@@ -316,8 +316,9 @@ def run(local_dir):
     xi = best_xi
     print(f"Decay retenu : xi={xi}/jour (demi-vie {math.log(2)/xi:.0f} j)")
 
-    # --- backtest walk-forward, refit mensuel, saisons 2223 -> fin
-    test_seasons = [s for s in sorted(m.Season.unique()) if s >= "2223"]
+    # --- backtest walk-forward, refit mensuel, saisons 2122 -> fin
+    # (2122 sert uniquement à entraîner le blend ; l'évaluation démarre en 2223)
+    test_seasons = [s for s in sorted(m.Season.unique()) if s >= "2122"]
     preds = []
     fit_cache_x = None
     for s in test_seasons:

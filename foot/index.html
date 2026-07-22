@@ -648,6 +648,21 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
     <table class="bt" id="paristable"></table>
     <div class="hint" id="parisnote"></div>
   </div>
+  <div class="card">
+    <h2>🔎 La recherche exhaustive de stratégie — résultats</h2>
+    <table class="bt">
+      <tr><th>Levier testé</th><th>Validation 2024-26</th><th>Verdict</th></tr>
+      <tr><td>Pronostic à chaque match</td><td>−7,1 %</td><td style="color:var(--bad)">perdant</td></tr>
+      <tr><td>Filtres value (edge, cotes, issues)</td><td>9 paris, IC −54/+193 %</td><td style="color:var(--bad)">bruit</td></tr>
+      <tr><td>Kelly fractionné</td><td>négatif</td><td style="color:var(--bad)">perdant</td></tr>
+      <tr><td>Line shopping (meilleures cotes, marge 0,75 %)</td><td>−2,6 % (365 paris, P(gain) 39 %)</td><td style="color:var(--bad)">insuffisant</td></tr>
+    </table>
+    <div class="hint">Protocole anti-illusion : critères choisis sur 2021-24, validés sur 2024-26
+      jamais vus. Le meilleur filtre d'apprentissage (+15,2 %) s'est effondré en validation.
+      Conclusion ferme : les cotes de Ligue 1 sont un marché efficace ; un modèle nourri des mêmes
+      données publiques ne peut pas les battre durablement. L'analyse value du simulateur montre
+      les écarts modèle/marché à titre informatif — pas comme promesse de gain.</div>
+  </div>
   <div class="card" style="border-color:rgba(240,113,107,.35)">
     <div class="hint" style="margin:0"><b style="color:var(--bad)">⚠ Réalité des chiffres.</b>
       Ce backtest utilise les cotes de clôture réelles sur 1 281 matchs. Aucune stratégie n'est
@@ -993,9 +1008,26 @@ function predict(){
   render(h, a, p);
   const cx = chaosIndex(h, a, p.pb), sp = surprise(h, a, p);
   const calib = p.mktUsed ? 'calibré AVEC cotes marché' : 'sans marché (mode journées)';
+  // analyse value : écart modèle vs cotes saisies
+  let valueHtml = '';
+  const oh=+$('oh').value, od=+$('od').value, oa=+$('oa').value;
+  if(oh>1 && od>1 && oa>1){
+    const cotes=[oh,od,oa], labels=['victoire '+h,'nul','victoire '+a];
+    const edges=cotes.map((c,i)=>p.pb[i]-1/c);
+    const k=edges.indexOf(Math.max(...edges));
+    const chips=edges.map((e,i)=>{
+      const col=e>0.05?'var(--good)':(e>0?'var(--amber)':'var(--muted)');
+      return '<span style="color:'+col+'">'+labels[i]+' '+(e>0?'+':'')+(100*e).toFixed(1)+' pts</span>';
+    }).join(' · ');
+    valueHtml='<div class="mchaos" style="margin-top:6px;border-color:rgba(123,216,143,.3);background:rgba(123,216,143,.06);color:var(--line)">'+
+      '🎯 <b>Analyse value</b> (proba génie − proba implicite cote) : '+chips+
+      (edges[k]>0.05?'<br><b style="color:var(--good)">Plus gros écart : '+labels[k]+' à '+cotes[k].toFixed(2)+'</b>'+
+      ' — mais rappel mesuré : même les écarts &gt;5 % ont perdu −2,6 % au meilleur prix du marché sur 2024-26 (365 paris). Un écart n\'est pas un gain.':'')+
+      '</div>';
+  }
   $('scom').innerHTML = comment(h, a, p,
     {rh:+$('rh').value||7, ra:+$('ra').value||7, news: useNews}) +
-    '<div style="margin-top:6px;font-size:9.5px;color:var(--muted)">Prédiction '+calib+'.</div>' +
+    '<div style="margin-top:6px;font-size:9.5px;color:var(--muted)">Prédiction '+calib+'.</div>' + valueHtml +
     '<div class="mchaos" style="margin-top:6px">⚡ Risque d\'upset : '+chaosDisp(cx)+
     '&nbsp;%'+(cx>=chaosThreshold()?' — match piégeux':'')+' · scénario surprise : '+
     sp.bi+'–'+sp.bj+' ('+pct(sp.bp)+')</div>';

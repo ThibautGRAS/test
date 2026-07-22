@@ -272,7 +272,7 @@ table.bt{width:100%;border-collapse:collapse;font-size:12px}
 .win{color:var(--good);font-weight:800}
 
 /* ---------- validation ---------- */
-const SNOM = {"2324":"2023-24","2425":"2024-25","2526":"2025-26"};
+const SNOM = {"2223":"2022-23","2324":"2023-24","2425":"2024-25","2526":"2025-26"};
 function fillValidation(){
   const V = M.validation; if(!V){ return; }
   // tableau par saison
@@ -304,14 +304,17 @@ function fillValidation(){
     'même pour le modèle calibré — la composante irrégularité de l\'indice apporte un vrai signal.';
   // tendances
   $('vtrends').innerHTML =
-    '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 3/3 (PSG) : le sommet '+
-    'est prévisible. La corrélation des rangs progresse (ρ 0,66 → 0,70 → 0,75) et le taux de '+
-    'scores exacts reste stable (10-13 %), au niveau de l\'état de l\'art. Le chaos est validé : '+
-    '+3 pts de favoris battus et +0,06 de log-loss dans le tiers irrégulier.<br><br>'+
+    '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 4/4 (PSG) : le sommet '+
+    'est prévisible. La corrélation des rangs progresse (ρ 0,64 → 0,65 → 0,69 → 0,76), le taux de '+
+    'scores exacts reste dans l\'état de l\'art (9,8-14,2 %), et la saison 2022-23 — ajoutée '+
+    'APRÈS l\'optimisation des hyperparamètres, donc quasi hors-échantillon — confirme la config '+
+    '(écart au marché parmi les plus faibles : 0,008). Le chaos reste validé sur 4 saisons : '+
+    '+1,4 pt de favoris battus et +0,05 de log-loss dans le tiers irrégulier.<br><br>'+
     '<b style="color:var(--line)">Le point aveugle récurrent.</b> Le modèle d\'avant-saison rate '+
-    'systématiquement les trajectoires de rupture : éclosions (Brest 14e prédit → 3e réel en '+
-    '2023-24, Lens 8e → 2e en 2025-26, Auxerre promu 18e → 10e) comme effondrements (Rennes '+
-    'raté DEUX saisons de suite : 2e → 10e puis 3e → 12e ; Nice 6e → 16e). Ces ruptures naissent '+
+    'systématiquement les trajectoires de rupture : éclosions (Clermont 19e prédit → 8e réel en '+
+    '2022-23, Brest 14e → 3e en 2023-24, Lens 8e → 2e en 2025-26, Auxerre promu 18e → 10e) comme '+
+    'effondrements (Ajaccio 10e → 18e ; Rennes raté DEUX saisons de suite : 2e → 10e puis '+
+    '3e → 12e ; Nice 6e → 16e). Ces ruptures naissent '+
     'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
     'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
     '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
@@ -347,7 +350,7 @@ function drawDist(){
   '<div style="display:grid;grid-template-columns:34px 1fr 1fr;gap:8px;font-size:9px;color:var(--muted);margin-top:4px">'+
   '<span></span><span>■ réel (ambre)</span><span>■ modèle (vert)</span></div>';
   $('dnote').textContent = curDTeam==='Toutes'
-    ? 'Backtest 2023-26 ('+D.n['Toutes']+' matchs) : le modèle reproduit fidèlement la distribution réelle — 3 buts : '+
+    ? 'Backtest 2022-26 ('+D.n['Toutes']+' matchs) : le modèle reproduit fidèlement la distribution réelle — 3 buts : '+
       (100*mo[3]).toFixed(1)+'% prédit vs '+(100*re[3]).toFixed(1)+'% observé. Le score affiché sur une carte est le mode de la matrice, forcément prudent ; la distribution complète, elle, est calibrée.'
     : curDTeam+' : '+D.n[curDTeam]+' matchs dans le backtest. Réel vs espérance du modèle sur ces rencontres.';
 }
@@ -488,7 +491,7 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
 <!-- ============ VUE VALIDATION ============ -->
 <div class="view" id="view-v">
   <div class="card">
-    <h2>Précision par saison — backtest walk-forward</h2>
+    <h2>Précision par saison — backtest 2022-26</h2>
     <table class="bt" id="vseas"></table>
     <div class="hint">Log-loss 1N2 (plus bas = mieux) sur chaque saison rejouée sans tricher :
       modèle réajusté mensuellement avec les seules données antérieures, calibration entraînée
@@ -553,7 +556,7 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
     </div>
   </div>
   <div class="card">
-    <h2>Backtest 3 saisons (2023-24 → 2025-26)</h2>
+    <h2>Backtest 4 saisons (2022-23 → 2025-26)</h2>
     <table class="bt" id="bt"></table>
     <div class="hint" id="btnote"></div>
   </div>
@@ -964,7 +967,7 @@ function fillProjection(){
 }
 
 /* ---------- validation ---------- */
-const SNOM = {"2324":"2023-24","2425":"2024-25","2526":"2025-26"};
+const SNOM = {"2223":"2022-23","2324":"2023-24","2425":"2024-25","2526":"2025-26"};
 function fillValidation(){
   const V = M.validation; if(!V){ return; }
   // tableau par saison
@@ -996,14 +999,17 @@ function fillValidation(){
     'même pour le modèle calibré — la composante irrégularité de l\'indice apporte un vrai signal.';
   // tendances
   $('vtrends').innerHTML =
-    '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 3/3 (PSG) : le sommet '+
-    'est prévisible. La corrélation des rangs progresse (ρ 0,66 → 0,70 → 0,75) et le taux de '+
-    'scores exacts reste stable (10-13 %), au niveau de l\'état de l\'art. Le chaos est validé : '+
-    '+3 pts de favoris battus et +0,06 de log-loss dans le tiers irrégulier.<br><br>'+
+    '<b style="color:var(--line)">Ce qui marche.</b> Le champion est prédit 4/4 (PSG) : le sommet '+
+    'est prévisible. La corrélation des rangs progresse (ρ 0,64 → 0,65 → 0,69 → 0,76), le taux de '+
+    'scores exacts reste dans l\'état de l\'art (9,8-14,2 %), et la saison 2022-23 — ajoutée '+
+    'APRÈS l\'optimisation des hyperparamètres, donc quasi hors-échantillon — confirme la config '+
+    '(écart au marché parmi les plus faibles : 0,008). Le chaos reste validé sur 4 saisons : '+
+    '+1,4 pt de favoris battus et +0,05 de log-loss dans le tiers irrégulier.<br><br>'+
     '<b style="color:var(--line)">Le point aveugle récurrent.</b> Le modèle d\'avant-saison rate '+
-    'systématiquement les trajectoires de rupture : éclosions (Brest 14e prédit → 3e réel en '+
-    '2023-24, Lens 8e → 2e en 2025-26, Auxerre promu 18e → 10e) comme effondrements (Rennes '+
-    'raté DEUX saisons de suite : 2e → 10e puis 3e → 12e ; Nice 6e → 16e). Ces ruptures naissent '+
+    'systématiquement les trajectoires de rupture : éclosions (Clermont 19e prédit → 8e réel en '+
+    '2022-23, Brest 14e → 3e en 2023-24, Lens 8e → 2e en 2025-26, Auxerre promu 18e → 10e) comme '+
+    'effondrements (Ajaccio 10e → 18e ; Rennes raté DEUX saisons de suite : 2e → 10e puis '+
+    '3e → 12e ; Nice 6e → 16e). Ces ruptures naissent '+
     'du mercato, des changements de banc et des dynamiques de vestiaire — exactement ce que le '+
     'signal actu vise à capter. C\'est la justification chiffrée de son rôle central.<br><br>'+
     '<b style="color:var(--line)">Pistes d\'amélioration, par ordre de valeur.</b> '+
@@ -1039,7 +1045,7 @@ function drawDist(){
   '<div style="display:grid;grid-template-columns:34px 1fr 1fr;gap:8px;font-size:9px;color:var(--muted);margin-top:4px">'+
   '<span></span><span>■ réel (ambre)</span><span>■ modèle (vert)</span></div>';
   $('dnote').textContent = curDTeam==='Toutes'
-    ? 'Backtest 2023-26 ('+D.n['Toutes']+' matchs) : le modèle reproduit fidèlement la distribution réelle — 3 buts : '+
+    ? 'Backtest 2022-26 ('+D.n['Toutes']+' matchs) : le modèle reproduit fidèlement la distribution réelle — 3 buts : '+
       (100*mo[3]).toFixed(1)+'% prédit vs '+(100*re[3]).toFixed(1)+'% observé. Le score affiché sur une carte est le mode de la matrice, forcément prudent ; la distribution complète, elle, est calibrée.'
     : curDTeam+' : '+D.n[curDTeam]+' matchs dans le backtest. Réel vs espérance du modèle sur ces rencontres.';
 }

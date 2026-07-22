@@ -93,3 +93,12 @@ BTTS) à partir du seul `model.json`.
 6. **Journal de prédictions figées** (`journal.py`) : l'Action (mardi + vendredi) fige
    les prédictions des 9 prochains jours et évalue les précédentes — hit@1 et log-loss
    2026-27 traçables et inviolables dès août.
+
+## v4.1 — Signal mercato calibré sur données
+- Historique Transfermarkt récupéré (ewenme/transfers, 17 581 transferts L1 1992-2022).
+- Calibration sur 108 club-saisons (étés 2017-2022) : la dérive du rating attaque en
+  cours de saison est prédite par le **solde net estival** — +0,0218 par écart-type
+  (t=2,33, p≈0,02). Défense et dépenses brutes : non significatifs.
+- Les amplitudes du signal actu (±0,03-0,08) sont dans la fourchette calibrée.
+- `mercato.py` : calcule les z-scores et applique le coefficient depuis un CSV de
+  transferts (clôture du 1er septembre, ou export récent via la GitHub Action).

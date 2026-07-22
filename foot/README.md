@@ -102,3 +102,18 @@ BTTS) à partir du seul `model.json`.
 - Les amplitudes du signal actu (±0,03-0,08) sont dans la fourchette calibrée.
 - `mercato.py` : calcule les z-scores et applique le coefficient depuis un CSV de
   transferts (clôture du 1er septembre, ou export récent via la GitHub Action).
+
+## v5.0 — Audit externe intégré
+- **Deux calibrateurs séparés** (audit §2) : `blend` (sans cotes, mode journées, L2=5 pour
+  éviter le surapprentissage → 0,999 vs 1,003) et `blend_marche` (avec cotes, mode simulateur).
+  Validation affiche 4 colonnes : journées / +cotes / marché / exact.
+- **Parité Python↔JS** (audit §3, §14) : `pick_score_pb` + `production_matrix` reproduisent
+  exactement la règle JS ; `displayedClass` unifie score affiché et commentaire.
+- **Début de saison sécurisé** (audit §6) : régularité anti-division-zéro (span→0 ⇒ 0,5).
+- **Départage classement** (audit §8) : points > diff > buts, réel et simulé.
+- **xG finaux** (audit §12) : espérances calculées sur la matrice recalée, pas lam/mu bruts.
+- **Libellés** (audit §9, §13) : « scénario central retenu » + score modal global affiché ;
+  chaos = « relation observée ».
+- **Empreinte mercato/contexte** : onglet Validation montre les résidus (réel − attendu)
+  par club et saison — base objective pour calibrer le signal actu sur données réelles.
+- Version du modèle dans meta (audit §20.5).

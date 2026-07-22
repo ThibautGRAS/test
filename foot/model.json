@@ -2,7 +2,7 @@
  "meta": {
   "model_version": "5.0.0",
   "schema_version": 3,
-  "genere": "2026-07-22 08:20 UTC",
+  "genere": "2026-07-22 08:31 UTC",
   "n_matchs": 3476,
   "saisons": [
    "1617",
@@ -2196,6 +2196,13 @@
      "retour": 1248.9,
      "roi": -2.5
     }
+   },
+   "edge_fort": {
+    "n": 56,
+    "roi": 7.6,
+    "ic95_bas": -35.6,
+    "ic95_haut": 55.2,
+    "p_positif": 61.7
    }
   }
  }

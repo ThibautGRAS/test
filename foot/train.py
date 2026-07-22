@@ -711,6 +711,26 @@ def run(local_dir):
         glob[strat] = {"mise": tot_m, "retour": round(tot_r, 1),
                        "roi": round(100*(tot_r-tot_m)/tot_m, 1) if tot_m else 0}
     paris["global"] = glob
+    # stratégie "edge fort" + intervalle bootstrap (démontre l'insuffisance de l'échantillon)
+    rng2 = np.random.default_rng(7)
+    outcomes = []   # gain net par pari (edge>0.10 flat)
+    for q in preds:
+        if q["season"] not in blend_eval_seasons: continue
+        c = q.get("cotes")
+        if not (c and all(np.isfinite(x) and x > 1 for x in c)): continue
+        edges = [q["blend"][i] - 1/c[i] for i in range(3)]
+        k = int(np.argmax(edges))
+        if edges[k] > 0.10:
+            outcomes.append(c[k] - 1 if k == q["y"] else -1.0)
+    if outcomes:
+        outcomes = np.array(outcomes)
+        boots = [rng2.choice(outcomes, len(outcomes)).mean() for _ in range(2000)]
+        paris["edge_fort"] = {
+            "n": len(outcomes), "roi": round(100*outcomes.mean(), 1),
+            "ic95_bas": round(100*np.percentile(boots, 2.5), 1),
+            "ic95_haut": round(100*np.percentile(boots, 97.5), 1),
+            "p_positif": round(100*float(np.mean(np.array(boots) > 0)), 1)}
+    print("Paris edge fort :", paris.get("edge_fort"))
     validation["paris"] = paris
     print("Backtest paris (ROI global) :", {k: v["roi"] for k, v in glob.items()})
 

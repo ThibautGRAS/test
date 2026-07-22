@@ -71,3 +71,8 @@ BTTS) à partir du seul `model.json`.
   décroissance xi=0,001 confirmée, règle d'affichage à marge de nul 0,16 optimale
   en hit@1 (12,07 %) ET en réalisme (29 % de nuls affichés vs 25 % réels).
 - Métrique « score exact » du pipeline alignée sur la règle de production.
+
+## v3.2 — Validation étendue à 2022-23
+- Backtest 4 saisons (1 281 matchs éval) : 2022-23 ajoutée APRÈS l'optimisation des
+  hyperparamètres → test quasi hors-échantillon réussi (blend 0,983 vs marché 0,975).
+- Champion prédit 4/4, chaos confirmé sur 854 matchs par tiers.

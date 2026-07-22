@@ -340,7 +340,7 @@ def blend_predict(W, f):
 
 # ---------------------------------------------------------------- backtest
 
-MARGE_NUL = 0.16   # marge d'affichage du nul — optimale en hit@1 ET en réalisme
+MARGE_NUL = 0.14   # marge d'affichage du nul — optimale en hit@1 ET en réalisme
 
 def pick_score(lam, mu, rho):
     """Ancienne règle sur matrice brute (conservée pour compat)."""

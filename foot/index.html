@@ -152,6 +152,9 @@ select:focus,input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0
 .mbar .a{background:linear-gradient(90deg,#9A4A40,#7A362E)}
 .mpct{grid-column:1 / -1;display:flex;justify-content:space-between;font-size:9px;
   color:var(--muted);font-variant-numeric:tabular-nums;margin-top:3px}
+.badge-club{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;
+  font-weight:900;letter-spacing:-.5px;vertical-align:middle;margin-right:6px;flex:0 0 auto;
+  box-shadow:0 1px 4px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.2);font-family:'Archivo',sans-serif}
 .badge{
   display:inline-block;font-size:8px;font-weight:800;letter-spacing:.5px;
   background:rgba(255,194,75,.14);color:var(--amber);
@@ -256,12 +259,12 @@ table.mx{border-collapse:separate;border-spacing:2px;width:100%;table-layout:fix
 .tops .sc{font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.5px}
 
 /* ---------- comparateur & classement ---------- */
-.gbar{display:grid;grid-template-columns:80px 1fr 38px;gap:8px;align-items:center;
+.gbar{display:grid;grid-template-columns:96px 1fr 38px;gap:8px;align-items:center;
   padding:4px 0;font-size:11px}
 .gbar .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
 .gbar .tr{height:15px;background:rgba(9,18,13,.6);border:1px solid var(--edge);border-radius:9px;overflow:hidden}
-.gbar .fl{height:100%;background:linear-gradient(90deg,#8A6420,var(--amber) 85%);border-radius:8px;
-  transition:width .4s cubic-bezier(.2,.7,.3,1);box-shadow:0 0 10px rgba(255,178,60,.25)}
+.gbar .fl{height:100%;min-width:6px;background:linear-gradient(90deg,#8A6420,var(--amber) 85%);border-radius:8px;
+  box-shadow:0 0 10px rgba(255,178,60,.25)}
 .gbar .vl{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
 .gbar.neg .fl{background:linear-gradient(90deg,#7A342C,var(--bad) 85%);box-shadow:0 0 10px rgba(240,113,107,.25)}
 .gbar .negfl{background:linear-gradient(90deg,var(--bad),#7A342C 85%)!important;box-shadow:0 0 10px rgba(240,113,107,.25)}
@@ -365,6 +368,25 @@ function fillParis(){
   const P = M.validation && M.validation.paris; if(!P) return;
   const stake = Math.max(1, +$('stake').value || 10);
   const strat = $('strat').value;
+  if(strat === 'edge' && P.edge_fort){
+    const e = P.edge_fort, gain = e.roi/100 * e.n * stake;
+    $('parisresult').innerHTML =
+      '<div style="text-align:center;padding:12px 0">'+
+      '<div class="digits" style="font-size:clamp(28px,9vw,40px);background:linear-gradient(180deg,#F5D9A6,var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent">'+
+      (gain>=0?'+':'')+Math.round(gain).toLocaleString('fr-FR')+' €</div>'+
+      '<div class="scorep">ROI '+e.roi+' % sur seulement '+e.n+' paris en 4 saisons</div></div>'+
+      '<div class="card" style="border-color:rgba(255,194,75,.4);margin:0"><div class="hint" style="margin:0">'+
+      '⚑ <b style="color:var(--line)">Le piège des petits échantillons.</b> Ce +'+e.roi+' % semble '+
+      'gagnant, mais avec 56 paris seulement, l\'intervalle de confiance à 95 % (bootstrap 2 000 tirages) '+
+      'va de <b style="color:var(--bad)">'+e.ic95_bas+' %</b> à <b style="color:var(--good)">+'+e.ic95_haut+' %</b>. '+
+      'Probabilité réelle d\'être gagnant : '+e.p_positif+' % — à peine mieux qu\'un lancer de pièce. '+
+      'Ce résultat n\'est PAS exploitable : il est indistinguable de la chance.</div></div>';
+    $('paristable').innerHTML = '';
+    $('parisnote').innerHTML = 'La leçon : filtrer sur un edge élevé réduit tellement le nombre de paris '+
+      'que le « gain » n\'a plus aucune signification statistique. C\'est exactement ainsi que les '+
+      'martingales et systèmes miracles se vendent — sur du bruit pris pour du signal.';
+    return;
+  }
   const g = P.global[strat];
   const gain = (g.retour - g.mise) * stake;
   const col = gain >= 0 ? 'var(--good)' : 'var(--bad)';
@@ -615,6 +637,7 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
       <div><label for="strat">Stratégie</label><select id="strat">
         <option value="modele">Pronostic du génie (chaque match)</option>
         <option value="value">Value bets (edge &gt; 5 %)</option>
+        <option value="edge">Value fort (edge &gt; 10 %) ⚑</option>
         <option value="favori">Favori du marché (témoin)</option>
       </select></div>
     </div>
@@ -721,6 +744,28 @@ function newsAdj(t){
 }
 
 /* Rangs des équipes actives (attaque, défense, Elo) pour les commentaires */
+const CLUB_COL = {
+  "Paris SG":["#004170","#DA291C"], "Marseille":["#2FAEE0","#ffffff"],
+  "Lyon":["#132968","#DA001A"], "Monaco":["#E30613","#ffffff"],
+  "Lille":["#E01E13","#0A0A0A"], "Nice":["#000000","#E30613"],
+  "Lens":["#FFE500","#E30613"], "Rennes":["#E23122","#0A0A0A"],
+  "Strasbourg":["#009BDB","#ffffff"], "Brest":["#E30613","#ffffff"],
+  "Toulouse":["#5F259F","#ffffff"], "Le Havre":["#00539F","#87CEEB"],
+  "Auxerre":["#004A99","#ffffff"], "Angers":["#0A0A0A","#ffffff"],
+  "Lorient":["#F58220","#0A0A0A"], "Paris FC":["#0A2240","#C8102E"],
+  "Troyes":["#009FE3","#ffffff"], "Le Mans":["#E30613","#FFE500"],
+  "Nantes":["#FCD116","#009B48"], "Metz":["#7A1E2B","#ffffff"],
+  "Reims":["#E30613","#ffffff"], "Montpellier":["#0060A9","#F58220"],
+  "Saint-Etienne":["#009B48","#ffffff"], "Clermont":["#E30613","#0A2240"],
+  "Ajaccio":["#E30613","#ffffff"]
+};
+function clubBadge(t, size){
+  size = size || 20;
+  const c = CLUB_COL[t] || ["#1E4030","#EDF3EC"];
+  const ini = t.replace(/[^A-Za-zÀ-ÿ ]/g,'').split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
+  return '<span class="badge-club" style="background:'+c[0]+';color:'+c[1]+
+    ';width:'+size+'px;height:'+size+'px;font-size:'+Math.round(size*0.42)+'px">'+ini+'</span>';
+}
 let RANKS = null;
 function buildRanks(){
   const act = Object.keys(M.equipes).filter(t => M.equipes[t].actif);
@@ -917,9 +962,9 @@ function showJournee(j){
     const bh = NEWS && NEWS.equipes[f.h] ? '<span class="badge">📰</span>' : '';
     const ba = NEWS && NEWS.equipes[f.a] ? '<span class="badge">📰</span>' : '';
     return '<div class="match" data-i="'+i+'">'+
-      '<div class="mt">'+f.h+bh+'<small>'+(M.equipes[f.h].promu?'promu · ':'')+'Elo '+M.equipes[f.h].elo.toFixed(0)+'</small></div>'+
+      '<div class="mt">'+clubBadge(f.h)+f.h+bh+'<small>'+(M.equipes[f.h].promu?'promu · ':'')+'Elo '+M.equipes[f.h].elo.toFixed(0)+'</small></div>'+
       '<div class="msc"><b>'+p.bi+'–'+p.bj+'</b><span>'+pct(p.bp)+'</span></div>'+
-      '<div class="mt r">'+ba+f.a+'<small>'+(M.equipes[f.a].promu?'promu · ':'')+'Elo '+M.equipes[f.a].elo.toFixed(0)+'</small></div>'+
+      '<div class="mt r">'+f.a+clubBadge(f.a)+ba+'<small>'+(M.equipes[f.a].promu?'promu · ':'')+'Elo '+M.equipes[f.a].elo.toFixed(0)+'</small></div>'+
       '<div class="mbar"><div class="h" style="flex:'+p.pb[0]+'"></div><div class="d" style="flex:'+p.pb[1]+'"></div><div class="a" style="flex:'+p.pb[2]+'"></div></div>'+
       '<div class="mpct"><span>1 '+pct(p.pb[0])+'</span><span>N '+pct(p.pb[1])+'</span><span>2 '+pct(p.pb[2])+'</span></div>'+
       '<div class="mcom">'+comment(f.h, f.a, p, {rh:f.rh, ra:f.ra})+'</div>'+
@@ -958,8 +1003,8 @@ function predict(){
 function render(h, a, P){
   const {X, pb, lam, mu, bi, bj, bp, n} = P;
   const xgH=P.xgH, xgA=P.xgA;
-  $('bh').innerHTML = h + '<small>domicile · ' + rankLabel(h) + '</small>';
-  $('ba').innerHTML = a + '<small>extérieur · ' + rankLabel(a) + '</small>';
+  $('bh').innerHTML = clubBadge(h,30) + '<br>' + h + '<small>domicile · ' + rankLabel(h) + '</small>';
+  $('ba').innerHTML = clubBadge(a,30) + '<br>' + a + '<small>extérieur · ' + rankLabel(a) + '</small>';
   $('score').textContent = bi + ' – ' + bj;
   // score modal global (max de toute la matrice) pour transparence
   let mgi=0,mgj=0,mgp=0;
@@ -1076,7 +1121,7 @@ function drawCrit(){
     const pctW = Math.max(4, 100*t01);
     const disp = curCrit==='actu' ? Math.round(50+50*v/((hi)||1)) : Math.round(100*t01);
     const col = critColor(t01);
-    return '<div class="gbar"><span class="nm">'+t+
+    return '<div class="gbar"><span class="nm">'+clubBadge(t,16)+t+
       (M.equipes[t].promu?' <span class="badge">P</span>':'')+'</span>'+
       '<span class="tr"><span class="fl" style="width:'+pctW+'%;background:'+
       'linear-gradient(90deg,'+col+'99,'+col+');box-shadow:0 0 9px '+col+'55"></span></span>'+
@@ -1148,7 +1193,7 @@ function fillProjection(){
     res.map((r,i) => {
       const cls = i===0?'win':(i>=res.length-2?'':''); 
       const rel = r.rel>0.25 ? ' style="color:var(--bad)"' : '';
-      return '<tr><td>'+(i+1)+'</td><td style="text-align:left">'+r.t+
+      return '<tr><td>'+(i+1)+'</td><td style="text-align:left">'+clubBadge(r.t,16)+r.t+
         (M.equipes[r.t].promu?' <span class="badge">promu</span>':'')+'</td>'+
         '<td>'+r.xpts.toFixed(0)+'</td>'+
         '<td class="'+(r.titre>0.3?'win':'')+'">'+fp(r.titre)+'</td>'+
@@ -1249,6 +1294,25 @@ function fillParis(){
   const P = M.validation && M.validation.paris; if(!P) return;
   const stake = Math.max(1, +$('stake').value || 10);
   const strat = $('strat').value;
+  if(strat === 'edge' && P.edge_fort){
+    const e = P.edge_fort, gain = e.roi/100 * e.n * stake;
+    $('parisresult').innerHTML =
+      '<div style="text-align:center;padding:12px 0">'+
+      '<div class="digits" style="font-size:clamp(28px,9vw,40px);background:linear-gradient(180deg,#F5D9A6,var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent">'+
+      (gain>=0?'+':'')+Math.round(gain).toLocaleString('fr-FR')+' €</div>'+
+      '<div class="scorep">ROI '+e.roi+' % sur seulement '+e.n+' paris en 4 saisons</div></div>'+
+      '<div class="card" style="border-color:rgba(255,194,75,.4);margin:0"><div class="hint" style="margin:0">'+
+      '⚑ <b style="color:var(--line)">Le piège des petits échantillons.</b> Ce +'+e.roi+' % semble '+
+      'gagnant, mais avec 56 paris seulement, l\'intervalle de confiance à 95 % (bootstrap 2 000 tirages) '+
+      'va de <b style="color:var(--bad)">'+e.ic95_bas+' %</b> à <b style="color:var(--good)">+'+e.ic95_haut+' %</b>. '+
+      'Probabilité réelle d\'être gagnant : '+e.p_positif+' % — à peine mieux qu\'un lancer de pièce. '+
+      'Ce résultat n\'est PAS exploitable : il est indistinguable de la chance.</div></div>';
+    $('paristable').innerHTML = '';
+    $('parisnote').innerHTML = 'La leçon : filtrer sur un edge élevé réduit tellement le nombre de paris '+
+      'que le « gain » n\'a plus aucune signification statistique. C\'est exactement ainsi que les '+
+      'martingales et systèmes miracles se vendent — sur du bruit pris pour du signal.';
+    return;
+  }
   const g = P.global[strat];
   const gain = (g.retour - g.mise) * stake;
   const col = gain >= 0 ? 'var(--good)' : 'var(--bad)';
@@ -1343,7 +1407,12 @@ function switchView(v){
     $('nav-'+k).classList.toggle('on', k===v);
   });
 }
-['j','s','c','v','p','m'].forEach(k => $('nav-'+k).addEventListener('click', () => switchView(k)));
+['j','s','c','v','p','m'].forEach(k => $('nav-'+k).addEventListener('click', () => {
+  switchView(k);
+  if(k==='c'){ drawCrit(); if(!PROJRANK) fillProjection(); }
+  if(k==='v'){ fillValidation(); buildDist(); }
+  if(k==='p'){ fillParis(); }
+}));
 
 /* ---------- init ---------- */
 Promise.all([

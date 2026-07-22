@@ -76,6 +76,67 @@ def load_matches(local_dir=None):
 
 # ---------------------------------------------------- features contextuelles
 
+def load_l2_stats(local_dir=None):
+    """Stats L2 (buts pour/contre par match) par (saison, équipe)."""
+    stats = {}
+    for code in season_codes():
+        df = None
+        if local_dir:
+            p = os.path.join(local_dir, f"F2_{code}.csv")
+            if os.path.exists(p):
+                df = pd.read_csv(p, encoding="utf-8", encoding_errors="replace")
+        else:
+            try:
+                df = pd.read_csv(f"https://www.football-data.co.uk/mmz4281/{code}/F2.csv",
+                                 encoding="utf-8", encoding_errors="replace")
+            except Exception:
+                continue
+        if df is None or df.empty: continue
+        df = df[df["HomeTeam"].notna() & df["FTHG"].notna()]
+        for t in set(df.HomeTeam) | set(df.AwayTeam):
+            h = df[df.HomeTeam == t]; a = df[df.AwayTeam == t]
+            n = len(h) + len(a)
+            stats[(code, t)] = ((h.FTHG.sum()+a.FTAG.sum())/n, (h.FTAG.sum()+a.FTHG.sum())/n)
+    return stats
+
+def promus_regression(m, l2, max_season=None):
+    """Régression stats L2 (saison de montée) -> ratings L1 (1re saison).
+    R²~0.37 en attaque, ~0 en défense (documenté). max_season exclut les
+    saisons >= max_season pour éviter toute fuite dans les simulations."""
+    seasons = sorted(m.Season.unique())
+    X, Ya, Yd = [], [], []
+    for i, sn in enumerate(seasons[1:], 1):
+        if max_season and sn >= max_season: break
+        prev = set(m[m.Season == seasons[i-1]].HomeTeam)
+        cur = m[m.Season == sn]
+        for t in (set(cur.HomeTeam) | set(cur.AwayTeam)) - prev:
+            key = (seasons[i-1], t)
+            if key not in l2: continue
+            fit = None  # fit paresseux par saison
+            X.append((sn, t, l2[key]))
+    # fits par saison (une fois chacune)
+    fits = {}
+    Xv, Yav, Ydv = [], [], []
+    for sn, t, (gf, ga) in X:
+        if sn not in fits:
+            cur = m[m.Season == sn]
+            fits[sn] = dc_fit(cur, cur.DateP.max(), 0.0, team_home=False)
+        f = fits[sn]
+        if t not in f["teams"]: continue
+        j = f["teams"].index(t)
+        Xv.append([1.0, gf, ga]); Yav.append(f["attack"][j]); Ydv.append(f["defense"][j])
+    if len(Xv) < 6:
+        return None
+    A = np.array(Xv)
+    ca, *_ = np.linalg.lstsq(A, np.array(Yav), rcond=None)
+    cd, *_ = np.linalg.lstsq(A, np.array(Ydv), rcond=None)
+    return {"att": ca.tolist(), "def": cd.tolist(), "n": len(Xv)}
+
+def prior_promu(reg, gf, ga):
+    att = reg["att"][0] + reg["att"][1]*gf + reg["att"][2]*ga
+    dfn = reg["def"][0] + reg["def"][1]*gf + reg["def"][2]*ga
+    return float(np.clip(att, -0.8, 0.2)), float(np.clip(dfn, -0.6, 0.2))
+
 def add_context(m):
     elo, last_date, form = {}, {}, {}
     season_teams = {s: set(g) for s, g in
@@ -122,7 +183,7 @@ def add_context(m):
 # ------------------------------------------------------------- Dixon-Coles
 
 def dc_fit(sub, ref_date, xi, teams=None, x0=None, cols=("FTHG", "FTAG"),
-           team_home=True, pen_home=25.0):
+           team_home=True, pen_home=25.0, w_mult=None):
     """Ajuste attaque/défense/gamma(+delta_i par équipe, rétréci)/rho par MV pondérée."""
     if teams is None:
         teams = sorted(set(sub.HomeTeam) | set(sub.AwayTeam))
@@ -132,6 +193,8 @@ def dc_fit(sub, ref_date, xi, teams=None, x0=None, cols=("FTHG", "FTAG"),
     ai = sub.AwayTeam.map(idx).to_numpy()
     x = sub[cols[0]].to_numpy(float); y = sub[cols[1]].to_numpy(float)
     w = np.exp(-xi * (ref_date - sub.DateP).dt.days.to_numpy(float))
+    if w_mult is not None:
+        w = w * np.asarray(w_mult, dtype=float)
 
     def unpack(p):
         return p[:n], p[n:2*n], p[2*n], p[2*n+1], (p[2*n+2:2*n+2+n] if team_home else np.zeros(n))
@@ -291,6 +354,7 @@ def rps(p, outcome):  # Ranked Probability Score (H=0,D=1,A=2)
     return float(np.sum((c - o)**2) / 2)
 
 def run(local_dir):
+    run._local = local_dir
     print("Chargement des données…")
     m = load_matches(local_dir)
     print(f"Total : {len(m)} matchs, {m.DateP.min().date()} -> {m.DateP.max().date()}")
@@ -370,6 +434,8 @@ def run(local_dir):
     W = blend_fit(np.array([q["f"] for q in preds]), np.array([q["y"] for q in preds]))
 
     # --- VALIDATION par saison : métriques, simulation de saison, chaos
+    L2STATS = load_l2_stats(getattr(run, "_local", None))
+    seasons_all = sorted(m.Season.unique())
     validation = {"saisons": {}, "chaos": {}}
     rng = np.random.default_rng(42)
     for s in blend_eval_seasons:
@@ -399,8 +465,24 @@ def run(local_dir):
         mats = []
         for _, r in sm.iterrows():
             p = dc_predict(pre, r.HomeTeam, r.AwayTeam)
-            if p is None:  # promu sans historique : prior moyen
-                p = {"lam": 1.25, "mu": 1.35}
+            if p is None:  # promu sans historique L1 : prior informé par la L2
+                reg_s = promus_regression(m, L2STATS, max_season=s)
+                prev_code = seasons_all[seasons_all.index(s)-1]
+                key = (prev_code, r.HomeTeam if r.HomeTeam not in pre["teams"] else r.AwayTeam)
+                if reg_s and key in L2STATS:
+                    att, dfn = prior_promu(reg_s, *L2STATS[key])
+                else:
+                    att, dfn = -0.30, -0.20
+                # lam/mu approximés contre un adversaire moyen
+                hn = r.HomeTeam not in pre["teams"]
+                opp = r.AwayTeam if hn else r.HomeTeam
+                oj = pre["teams"].index(opp) if opp in pre["teams"] else None
+                oatt = pre["attack"][oj] if oj is not None else 0.0
+                odef = pre["defense"][oj] if oj is not None else 0.0
+                if hn:
+                    p = {"lam": math.exp(att - odef + pre["gamma"]), "mu": math.exp(oatt - dfn)}
+                else:
+                    p = {"lam": math.exp(oatt - dfn + pre["gamma"]), "mu": math.exp(att - odef)}
             mats.append((ti[r.HomeTeam], ti[r.AwayTeam],
                          dc_matrix(p["lam"], p["mu"], pre["rho"]).ravel()))
         NS, K = 2000, MAX_GOALS + 1
@@ -471,6 +553,39 @@ def run(local_dir):
         "lecture": "tiers bas vs haut d'irrégularité (constance des points saison précédente)"}
     print("Validation chaos :", validation["chaos"])
 
+    # poids du chaos appris : logistique favori_battu ~ entropie + irrégularité
+    # (rows2 : mêmes matchs, avec entropie du blend)
+    rows2 = []
+    for q in preds:
+        if q["season"] not in blend_eval_seasons or q["mkt"] is None: continue
+        prev = seasons_sorted[seasons_sorted.index(q["season"]) - 1]
+        stds = season_ptstd(prev)
+        vals = sorted(stds.values()); lo_, hi_ = vals[0], vals[-1]
+        r = m.loc[q["idx"]]
+        irr = float(np.mean([(stds.get(t, vals[len(vals)//2]) - lo_) / (hi_ - lo_)
+                             for t in (r.HomeTeam, r.AwayTeam)]))
+        pb = list(q["blend"]); fav = int(np.argmax(pb))
+        beaten = int((fav == 0 and q["y"] == 2) or (fav == 2 and q["y"] == 0))
+        H = -sum(p*math.log(p) for p in pb if p > 0) / math.log(3)
+        rows2.append((H, irr, beaten))
+    F2m = np.array([[1.0, h, i] for h, i, _ in rows2])
+    yb = np.array([b for _, _, b in rows2], dtype=float)
+    def nllg(wv):
+        z = F2m @ wv; pp = 1/(1+np.exp(-z))
+        nll = -np.sum(yb*np.log(np.clip(pp,1e-9,1)) + (1-yb)*np.log(np.clip(1-pp,1e-9,1)))
+        return nll + 0.5*np.sum(wv[1:]**2), F2m.T @ (pp - yb) + np.concatenate([[0], wv[1:]])
+    wres = minimize(nllg, np.zeros(3), jac=True, method="L-BFGS-B").x
+    scores = F2m @ wres
+    seuil = float(np.quantile(scores, 0.70))
+    top = yb[scores >= seuil].mean(); bot = yb[scores < seuil].mean()
+    validation["chaos_appris"] = {
+        "w": [round(float(v), 4) for v in wres],
+        "features": ["1", "entropie_blend", "irregularite"],
+        "seuil_q70": round(seuil, 4),
+        "favori_battu_hauts_pct": round(100*float(top), 1),
+        "favori_battu_bas_pct": round(100*float(bot), 1)}
+    print("Chaos appris :", validation["chaos_appris"])
+
     # --- distribution des totaux de buts (backtest) : réel vs modèle, par équipe
     KMAXD = 7
     def empty(): return [0.0]*(KMAXD+1)
@@ -535,17 +650,24 @@ def run(local_dir):
         "backtest": metrics,
         "validation": validation,
     }
-    if new_teams:
-        ref = [t for t in ["Angers", "Le Havre", "Auxerre", "Lorient"]
-               if t in model["equipes"]]
-        p_att = float(np.mean([model["equipes"][t]["attaque"] for t in ref])) - 0.05
-        p_def = float(np.mean([model["equipes"][t]["defense"] for t in ref])) - 0.05
-        for t in new_teams:
-            model["equipes"][t] = {"attaque": round(p_att, 4), "defense": round(p_def, 4),
-                                   "delta_dom": 0.0,
-                                   "elo": ELO_PROMOTED, "forme5": 1.0, "dernier_match": "",
-                                   "actif": True, "promu": True,
-                                   "prior": "promu (moyenne clubs modestes - malus)"}
+    reg_full = promus_regression(m, L2STATS)
+    promus_final = []
+    if fixture_teams:
+        prev_l1 = set(m[m.Season == m.Season.max()].HomeTeam) | \
+                  set(m[m.Season == m.Season.max()].AwayTeam)
+        promus_final = [t for t in fixture_teams if t not in prev_l1]
+    for t in set(new_teams) | set(promus_final):
+        key = (m.Season.max(), t)
+        if reg_full and key in L2STATS:
+            p_att, p_def = prior_promu(reg_full, *L2STATS[key])
+            src = f"promu (régression L2, R² att 0.37, n={reg_full['n']})"
+        else:
+            p_att, p_def = -0.30, -0.20
+            src = "promu (prior par défaut, pas de données L2)"
+        model["equipes"][t] = {"attaque": round(p_att, 4), "defense": round(p_def, 4),
+                               "delta_dom": 0.0,
+                               "elo": ELO_PROMOTED, "forme5": 1.0, "dernier_match": "",
+                               "actif": True, "promu": True, "prior": src}
     if fixture_teams:
         prev = set(m[m.Season == m.Season.max()].HomeTeam) | \
                set(m[m.Season == m.Season.max()].AwayTeam)

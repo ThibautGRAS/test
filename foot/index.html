@@ -536,6 +536,13 @@ footer{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:18px;opacit
 <div class="view" id="view-m">
   <div class="card">
     <h2>Signal actu — mercato & contexte</h2>
+    <div class="hint" style="margin-top:0;padding:8px 10px;background:rgba(123,216,143,.07);border:1px solid rgba(123,216,143,.22);border-radius:9px">
+      <b style="color:var(--good)">Calibré sur données.</b> Le lien mercato → performance est mesuré
+      sur 108 club-saisons (étés 2017-2022, Transfermarkt) : <b style="color:var(--line)">+0,022
+      d'attaque par écart-type de solde net</b> (t=2,3, significatif). La défense et les dépenses
+      brutes ne prédisent rien. Les amplitudes ci-dessous respectent cette calibration ; au
+      1er septembre, mercato.py remplacera les estimations presse par les soldes définitifs.
+    </div>
     <div class="hint" id="newsnote"></div>
     <div id="newslist" style="margin-top:8px"></div>
   </div>

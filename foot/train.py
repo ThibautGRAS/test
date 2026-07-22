@@ -72,6 +72,13 @@ def load_matches(local_dir=None):
             col = pref + side
             if col in m.columns:
                 m[f"Mkt{side}"] = m[f"Mkt{side}"].fillna(pd.to_numeric(m[col], errors="coerce"))
+    # cotes brutes (non de-viggées) pour le backtest de paris
+    for side in ["H", "D", "A"]:
+        m[f"Cote{side}"] = np.nan
+        for pref in ["B365", "Avg", "PS"]:
+            col = pref + side
+            if col in m.columns:
+                m[f"Cote{side}"] = m[f"Cote{side}"].fillna(pd.to_numeric(m[col], errors="coerce"))
     return m
 
 # ---------------------------------------------------- features contextuelles
@@ -423,7 +430,8 @@ def run(local_dir):
                 preds.append({"idx": ridx, "season": s, "dc": p,
                               "fb": feat_base(r, p), "fm": feat_mkt(r, p),
                               "y": int(ycls[ridx]),
-                              "mkt": devig(r.MktH, r.MktD, r.MktA)})
+                              "mkt": devig(r.MktH, r.MktD, r.MktA),
+                              "cotes": [r.CoteH, r.CoteD, r.CoteA]})
         print(f"  backtest {s}: ok ({len([q for q in preds if q['season']==s])} matchs)")
 
     # --- blend walk-forward par saison (entraîné sur saisons de test antérieures)
@@ -662,6 +670,49 @@ def run(local_dir):
             dist[kind][key] = [round(x/n_, 4) for x in v]
     validation["dist_buts"] = {"reel": dist["reel"], "modele": dist["modele"],
                                "n": dist["n"], "kmax": KMAXD}
+
+    # --- backtest de paris : "si tu avais suivi le génie" (cotes réelles)
+    paris = {"saisons": {}, "strategies": ["modele", "value", "favori"]}
+    for s in blend_eval_seasons:
+        cur = [q for q in preds if q["season"] == s and q.get("cotes")
+               and all(np.isfinite(c) and c > 1 for c in q["cotes"])]
+        row = {}
+        for strat in ("modele", "value", "favori"):
+            mise = ret = nb = win = 0
+            capital = 100.0; courbe = [100.0]
+            for q in cur:
+                c = q["cotes"]
+                if strat == "modele":
+                    pick = int(np.argmax(q["blend"]))
+                elif strat == "favori":
+                    pick = int(np.argmin(c))
+                else:  # value : edge > 5%
+                    imp = [1/x for x in c]
+                    edges = [q["blend"][i] - imp[i] for i in range(3)]
+                    pick = int(np.argmax(edges))
+                    if edges[pick] <= 0.05: pick = None
+                if pick is None:
+                    continue
+                mise += 1; nb += 1
+                gain = c[pick] if pick == q["y"] else 0.0
+                ret += gain; capital += gain - 1
+                if pick == q["y"]: win += 1
+                courbe.append(round(capital, 1))
+            row[strat] = {"mise": nb, "retour": round(ret, 1),
+                          "roi": round(100*(ret-mise)/mise, 1) if mise else 0,
+                          "gagnes": win, "capital_final": round(capital, 1),
+                          "courbe": courbe[::max(1, len(courbe)//40)]}  # ~40 points
+        paris["saisons"][s] = row
+    # global
+    glob = {}
+    for strat in ("modele", "value", "favori"):
+        tot_m = sum(paris["saisons"][s][strat]["mise"] for s in blend_eval_seasons)
+        tot_r = sum(paris["saisons"][s][strat]["retour"] for s in blend_eval_seasons)
+        glob[strat] = {"mise": tot_m, "retour": round(tot_r, 1),
+                       "roi": round(100*(tot_r-tot_m)/tot_m, 1) if tot_m else 0}
+    paris["global"] = glob
+    validation["paris"] = paris
+    print("Backtest paris (ROI global) :", {k: v["roi"] for k, v in glob.items()})
 
     # --- modèle final sur tout l'historique
     now = m.DateP.max() + timedelta(days=1)
